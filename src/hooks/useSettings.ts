@@ -10,6 +10,7 @@ export function useSettings() {
   const [settings, setSettings] = useState<Settings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [settingsId, setSettingsId] = useState<string | null>(null);
 
   useEffect(() => {
     loadSettings();
@@ -34,20 +35,48 @@ export function useSettings() {
         .from('settings')
         .select('*')
         .limit(1)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
       if (data) {
+        setSettingsId(data.id);
         setSettings({
-          upiId: data.upi_id,
-          qrCodeUrl: data.qr_code_url,
-          telegramLink: data.telegram_link,
-          contactEmail: data.contact_email,
-          contactPhone: data.contact_phone,
+          upiId: data.upi_id || '',
+          qrCodeUrl: data.qr_code_url || '',
+          telegramLink: data.telegram_link || '',
+          contactEmail: data.contact_email || '',
+          contactPhone: data.contact_phone || '',
         });
+      } else {
+        // No settings row exists, create one
+        const { data: newData, error: insertError } = await supabase
+          .from('settings')
+          .insert({
+            upi_id: 'yourname@upi',
+            qr_code_url: '',
+            telegram_link: '',
+            contact_email: '',
+            contact_phone: '',
+          })
+          .select()
+          .single();
+
+        if (insertError) throw insertError;
+
+        if (newData) {
+          setSettingsId(newData.id);
+          setSettings({
+            upiId: newData.upi_id || '',
+            qrCodeUrl: newData.qr_code_url || '',
+            telegramLink: newData.telegram_link || '',
+            contactEmail: newData.contact_email || '',
+            contactPhone: newData.contact_phone || '',
+          });
+        }
       }
     } catch (err) {
+      console.error('Error loading settings:', err);
       setError(err as Error);
       // Fallback to mock data
       const storedSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
@@ -57,28 +86,67 @@ export function useSettings() {
     }
   };
 
-  const updateSettings = async (newSettings: Partial<Settings>) => {
+  const updateSettings = async (newSettings: Settings) => {
     if (!isSupabaseConfigured) {
       // Save to localStorage
-      const updatedSettings = { ...settings, ...newSettings } as Settings;
-      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(updatedSettings));
-      setSettings(updatedSettings);
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(newSettings));
+      setSettings(newSettings);
       return;
     }
 
-    const { error } = await supabase
-      .from('settings')
-      .update({
-        upi_id: newSettings.upiId,
-        qr_code_url: newSettings.qrCodeUrl,
-        telegram_link: newSettings.telegramLink,
-        contact_email: newSettings.contactEmail,
-        contact_phone: newSettings.contactPhone,
-      })
-      .eq('id', (await supabase.from('settings').select('id').single()).data?.id);
+    try {
+      // Build update object with only defined values
+      const updateData: Record<string, any> = {};
+      
+      if (newSettings.upiId !== undefined) {
+        updateData.upi_id = newSettings.upiId;
+      }
+      if (newSettings.qrCodeUrl !== undefined) {
+        updateData.qr_code_url = newSettings.qrCodeUrl;
+      }
+      if (newSettings.telegramLink !== undefined) {
+        updateData.telegram_link = newSettings.telegramLink;
+      }
+      if (newSettings.contactEmail !== undefined) {
+        updateData.contact_email = newSettings.contactEmail;
+      }
+      if (newSettings.contactPhone !== undefined) {
+        updateData.contact_phone = newSettings.contactPhone;
+      }
+      
+      updateData.updated_at = new Date().toISOString();
 
-    if (error) throw error;
-    await loadSettings();
+      if (settingsId) {
+        // Update existing settings
+        const { error } = await supabase
+          .from('settings')
+          .update(updateData)
+          .eq('id', settingsId);
+
+        if (error) throw error;
+      } else {
+        // Insert new settings if no ID
+        const { data, error } = await supabase
+          .from('settings')
+          .insert({
+            upi_id: newSettings.upiId || '',
+            qr_code_url: newSettings.qrCodeUrl || '',
+            telegram_link: newSettings.telegramLink || '',
+            contact_email: newSettings.contactEmail || '',
+            contact_phone: newSettings.contactPhone || '',
+          })
+          .select()
+          .single();
+
+        if (error) throw error;
+        if (data) setSettingsId(data.id);
+      }
+
+      setSettings(newSettings);
+    } catch (err) {
+      console.error('Error updating settings:', err);
+      throw err;
+    }
   };
 
   const uploadQrCode = async (file: File): Promise<string> => {
