@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,33 +10,65 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { User, ShoppingBag, LayoutDashboard, LogOut, Menu } from 'lucide-react';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { User, ShoppingBag, LayoutDashboard, LogOut, Menu, X, ChevronDown } from 'lucide-react';
+import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 
 export function Header() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [isOpen, setIsOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/');
+    setIsOpen(false);
   };
 
-  const NavLinks = () => (
+  const handleNavigate = (path: string) => {
+    navigate(path);
+    setIsOpen(false);
+  };
+
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
+
+  const NavLinks = ({ mobile = false }: { mobile?: boolean }) => (
     <>
-      <Link to="/" className="text-sm font-semibold hover:text-primary transition-colors">
+      <Link 
+        to="/" 
+        onClick={() => setIsOpen(false)}
+        className={`font-semibold transition-colors hover:text-primary ${mobile ? 'text-base py-2' : 'text-sm'}`}
+      >
         Products
       </Link>
-      <Link to="/community" className="text-sm font-semibold hover:text-primary transition-colors">
+      <Link 
+        to="/community" 
+        onClick={() => setIsOpen(false)}
+        className={`font-semibold transition-colors hover:text-primary ${mobile ? 'text-base py-2' : 'text-sm'}`}
+      >
         Community
       </Link>
       {user && (
-        <Link to="/orders" className="text-sm font-semibold hover:text-primary transition-colors">
+        <Link 
+          to="/orders" 
+          onClick={() => setIsOpen(false)}
+          className={`font-semibold transition-colors hover:text-primary ${mobile ? 'text-base py-2' : 'text-sm'}`}
+        >
           My Orders
         </Link>
       )}
       {user?.role === 'admin' && (
-        <Link to="/admin" className="text-sm font-semibold hover:text-primary transition-colors">
+        <Link 
+          to="/admin" 
+          onClick={() => setIsOpen(false)}
+          className={`font-semibold transition-colors hover:text-primary ${mobile ? 'text-base py-2' : 'text-sm'}`}
+        >
           Admin
         </Link>
       )}
@@ -42,13 +76,17 @@ export function Header() {
   );
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b-2 border-black bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-lg border-b border-gray-200 shadow-sm">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <ShoppingBag className="h-6 w-6" />
-            <span className="text-xl font-bold font-['Space_Grotesk']">Devsera Store</span>
+          <Link to="/" className="flex items-center space-x-2 group">
+            <div className="w-9 h-9 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-teal-500/25 group-hover:shadow-teal-500/40 transition-shadow">
+              <ShoppingBag className="h-5 w-5 text-white" />
+            </div>
+            <span className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+              Devsera Store
+            </span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -57,71 +95,154 @@ export function Header() {
           </nav>
 
           {/* Auth Section */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
             {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="brutalist-button hidden md:flex">
-                    <User className="h-4 w-4 mr-2" />
-                    {user.name}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48 brutalist-card">
-                  <DropdownMenuItem onClick={() => navigate('/orders')}>
-                    <ShoppingBag className="h-4 w-4 mr-2" />
-                    My Orders
-                  </DropdownMenuItem>
-                  {user.role === 'admin' && (
-                    <DropdownMenuItem onClick={() => navigate('/admin')}>
-                      <LayoutDashboard className="h-4 w-4 mr-2" />
-                      Admin Dashboard
+              <>
+                {/* Desktop User Menu */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-gray-100 transition-colors"
+                    >
+                      <Avatar className="h-8 w-8 border-2 border-primary/20">
+                        <AvatarFallback className="bg-gradient-to-br from-teal-500 to-emerald-600 text-white text-sm font-semibold">
+                          {getInitials(user.name || user.email)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="text-left">
+                        <p className="text-sm font-semibold text-gray-900 leading-tight">{user.name}</p>
+                        <p className="text-xs text-gray-500 leading-tight">
+                          {user.role === 'admin' ? 'Administrator' : 'Member'}
+                        </p>
+                      </div>
+                      <ChevronDown className="h-4 w-4 text-gray-400" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 rounded-xl shadow-xl border border-gray-200 p-1">
+                    <div className="px-3 py-2 border-b border-gray-100 mb-1">
+                      <p className="text-sm font-semibold text-gray-900">{user.name}</p>
+                      <p className="text-xs text-gray-500">{user.email}</p>
+                    </div>
+                    <DropdownMenuItem 
+                      onClick={() => navigate('/orders')}
+                      className="rounded-lg cursor-pointer"
+                    >
+                      <ShoppingBag className="h-4 w-4 mr-3 text-gray-500" />
+                      My Orders
                     </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Logout
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+                    {user.role === 'admin' && (
+                      <DropdownMenuItem 
+                        onClick={() => navigate('/admin')}
+                        className="rounded-lg cursor-pointer"
+                      >
+                        <LayoutDashboard className="h-4 w-4 mr-3 text-gray-500" />
+                        Admin Dashboard
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuSeparator className="my-1" />
+                    <DropdownMenuItem 
+                      onClick={handleLogout}
+                      className="rounded-lg cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
+                    >
+                      <LogOut className="h-4 w-4 mr-3" />
+                      Logout
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </>
             ) : (
               <div className="hidden md:flex items-center space-x-2">
-                <Button variant="outline" onClick={() => navigate('/login')} className="brutalist-button">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => navigate('/login')} 
+                  className="rounded-xl font-semibold hover:bg-gray-100"
+                >
                   Login
                 </Button>
-                <Button onClick={() => navigate('/register')} className="brutalist-button bg-primary text-primary-foreground hover:bg-primary/90">
+                <Button 
+                  onClick={() => navigate('/register')} 
+                  className="rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-semibold shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 transition-all"
+                >
                   Sign Up
                 </Button>
               </div>
             )}
 
             {/* Mobile Menu */}
-            <Sheet>
+            <Sheet open={isOpen} onOpenChange={setIsOpen}>
               <SheetTrigger asChild className="md:hidden">
-                <Button variant="outline" size="icon" className="brutalist-button">
+                <Button variant="ghost" size="icon" className="rounded-xl hover:bg-gray-100">
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-64">
-                <nav className="flex flex-col space-y-4 mt-8">
-                  <NavLinks />
-                  {!user && (
-                    <>
-                      <Button variant="outline" onClick={() => navigate('/login')} className="brutalist-button w-full">
-                        Login
+              <SheetContent side="right" className="w-80 p-0">
+                <div className="flex flex-col h-full">
+                  {/* Mobile Header */}
+                  <div className="flex items-center justify-between p-4 border-b border-gray-100">
+                    <span className="text-lg font-bold text-gray-900">Menu</span>
+                    <SheetClose asChild>
+                      <Button variant="ghost" size="icon" className="rounded-xl hover:bg-gray-100">
+                        <X className="h-5 w-5" />
                       </Button>
-                      <Button onClick={() => navigate('/register')} className="brutalist-button bg-primary text-primary-foreground w-full">
-                        Sign Up
-                      </Button>
-                    </>
-                  )}
+                    </SheetClose>
+                  </div>
+
+                  {/* User Profile Section (Mobile) */}
                   {user && (
-                    <Button variant="outline" onClick={handleLogout} className="brutalist-button w-full">
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Logout
-                    </Button>
+                    <div className="p-4 bg-gradient-to-br from-teal-50 to-emerald-50 border-b border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-12 w-12 border-2 border-white shadow-md">
+                          <AvatarFallback className="bg-gradient-to-br from-teal-500 to-emerald-600 text-white text-lg font-semibold">
+                            {getInitials(user.name || user.email)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-semibold text-gray-900">{user.name}</p>
+                          <p className="text-sm text-gray-500">{user.email}</p>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-teal-100 text-teal-800 mt-1">
+                            {user.role === 'admin' ? 'Administrator' : 'Member'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   )}
-                </nav>
+
+                  {/* Navigation Links */}
+                  <nav className="flex flex-col p-4 space-y-1">
+                    <NavLinks mobile />
+                  </nav>
+
+                  {/* Mobile Auth Buttons */}
+                  <div className="mt-auto p-4 border-t border-gray-100 space-y-2">
+                    {!user ? (
+                      <>
+                        <Button 
+                          variant="outline" 
+                          onClick={() => handleNavigate('/login')} 
+                          className="w-full rounded-xl font-semibold border-2 border-gray-200"
+                        >
+                          Login
+                        </Button>
+                        <Button 
+                          onClick={() => handleNavigate('/register')} 
+                          className="w-full rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-semibold"
+                        >
+                          Sign Up
+                        </Button>
+                      </>
+                    ) : (
+                      <Button 
+                        variant="outline" 
+                        onClick={handleLogout} 
+                        className="w-full rounded-xl font-semibold border-2 border-red-200 text-red-600 hover:bg-red-50"
+                      >
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Logout
+                      </Button>
+                    )}
+                  </div>
+                </div>
               </SheetContent>
             </Sheet>
           </div>

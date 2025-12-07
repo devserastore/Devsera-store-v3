@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { Header } from '@/components/shared/Header';
 import { Toaster } from '@/components/ui/toaster';
@@ -14,6 +14,7 @@ import { AdminDashboard } from '@/pages/admin/AdminDashboard';
 
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
   const { user, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -24,7 +25,8 @@ function ProtectedRoute({ children, adminOnly = false }: { children: React.React
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    // Pass the current location so we can redirect back after login
+    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 
   if (adminOnly && user.role !== 'admin') {

@@ -16,7 +16,10 @@ export const mockProducts: Product[] = [
       'Magic resize',
       'Team collaboration'
     ],
-    category: 'Design'
+    category: 'Design',
+    deliveryType: 'CREDENTIALS',
+    deliveryInstructions: 'You will receive login credentials within 2 hours of payment verification.',
+    isActive: true
   },
   {
     id: '2',
@@ -33,7 +36,12 @@ export const mockProducts: Product[] = [
       'Applicant insights',
       'Premium badge'
     ],
-    category: 'Professional'
+    category: 'Professional',
+    deliveryType: 'MANUAL_ACTIVATION',
+    deliveryInstructions: 'We will upgrade your existing LinkedIn account to Premium.',
+    requiresUserInput: true,
+    userInputLabel: 'Your LinkedIn Email',
+    isActive: true
   },
   {
     id: '3',
@@ -50,7 +58,10 @@ export const mockProducts: Product[] = [
       'No ads',
       'Unlimited content'
     ],
-    category: 'Entertainment'
+    category: 'Entertainment',
+    deliveryType: 'CREDENTIALS',
+    deliveryInstructions: 'You will receive shared account credentials within 2 hours.',
+    isActive: true
   },
   {
     id: '4',
@@ -67,7 +78,12 @@ export const mockProducts: Product[] = [
       'Unlimited skips',
       'Play any song'
     ],
-    category: 'Entertainment'
+    category: 'Entertainment',
+    deliveryType: 'MANUAL_ACTIVATION',
+    deliveryInstructions: 'We will add your account to our Family plan.',
+    requiresUserInput: true,
+    userInputLabel: 'Your Spotify Email',
+    isActive: true
   },
   {
     id: '5',
@@ -84,7 +100,10 @@ export const mockProducts: Product[] = [
       'Advanced data analysis',
       'DALL-E 3 integration'
     ],
-    category: 'AI Tools'
+    category: 'AI Tools',
+    deliveryType: 'CREDENTIALS',
+    deliveryInstructions: 'You will receive login credentials within 2 hours.',
+    isActive: true
   },
   {
     id: '6',
@@ -101,7 +120,52 @@ export const mockProducts: Product[] = [
       'YouTube Music Premium',
       'Picture-in-picture'
     ],
-    category: 'Entertainment'
+    category: 'Entertainment',
+    deliveryType: 'MANUAL_ACTIVATION',
+    deliveryInstructions: 'We will add your account to our Family plan.',
+    requiresUserInput: true,
+    userInputLabel: 'Your Google Email',
+    isActive: true
+  },
+  {
+    id: '7',
+    name: 'Microsoft Office 365',
+    description: 'Full Microsoft Office suite with cloud storage',
+    image: 'https://images.unsplash.com/photo-1633419461186-7d40a38105ec?w=800&q=80',
+    originalPrice: 4999,
+    salePrice: 799,
+    duration: '1 Year',
+    features: [
+      'Word, Excel, PowerPoint',
+      '1TB OneDrive storage',
+      'Outlook email',
+      'Microsoft Teams',
+      'All devices'
+    ],
+    category: 'Productivity',
+    deliveryType: 'COUPON_CODE',
+    deliveryInstructions: 'You will receive a license key to activate on your Microsoft account.',
+    isActive: true
+  },
+  {
+    id: '8',
+    name: 'NordVPN Premium',
+    description: 'Secure VPN with 5500+ servers worldwide',
+    image: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=800&q=80',
+    originalPrice: 999,
+    salePrice: 199,
+    duration: '1 Year',
+    features: [
+      '5500+ servers',
+      '60 countries',
+      'No-logs policy',
+      '6 devices',
+      'Kill switch'
+    ],
+    category: 'Security',
+    deliveryType: 'INSTANT_KEY',
+    deliveryInstructions: 'Your license key will be delivered instantly after payment verification.',
+    isActive: true
   }
 ];
 
@@ -125,8 +189,22 @@ export const mockOrders: Order[] = [
     productId: '2',
     status: 'SUBMITTED',
     paymentScreenshot: 'https://images.unsplash.com/photo-1563013544-824ae1b704d3?w=400&q=80',
+    userProvidedInput: 'user@linkedin.com',
     createdAt: '2024-01-16T14:20:00Z',
     updatedAt: '2024-01-16T14:25:00Z'
+  },
+  {
+    id: 'ORD-003',
+    userId: '1',
+    productId: '7',
+    status: 'COMPLETED',
+    credentials: {
+      licenseKey: 'XXXXX-XXXXX-XXXXX-XXXXX-XXXXX',
+      expiryDate: '2025-01-15',
+      additionalInfo: 'Activate at office.com/setup'
+    },
+    createdAt: '2024-01-14T09:00:00Z',
+    updatedAt: '2024-01-14T10:30:00Z'
   }
 ];
 

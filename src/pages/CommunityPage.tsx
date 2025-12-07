@@ -1,26 +1,68 @@
 import { useState } from 'react';
+import { useCommunityPosts } from '@/hooks/useCommunity';
+import { useSettings } from '@/hooks/useSettings';
 import { mockCommunityPosts } from '@/data/mockData';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Heart, MessageCircle, Send } from 'lucide-react';
+import { Heart, MessageCircle, Send, ExternalLink, Users } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
+import { isSupabaseConfigured } from '@/lib/supabase';
 
 export function CommunityPage() {
   const [newPost, setNewPost] = useState('');
   const { user } = useAuth();
   const { toast } = useToast();
+  const { posts: dbPosts, isLoading, createPost, likePost } = useCommunityPosts();
+  const { settings } = useSettings();
 
-  const handleCreatePost = () => {
+  // Use mock data if Supabase is not configured
+  const posts = isSupabaseConfigured && dbPosts.length > 0 ? dbPosts : mockCommunityPosts;
+
+  const handleJoinChannel = () => {
+    if (settings?.telegramLink) {
+      window.open(settings.telegramLink, '_blank');
+    } else {
+      toast({
+        title: 'Channel not configured',
+        description: 'Please contact admin to set up the community channel.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleCreatePost = async () => {
     if (!newPost.trim()) return;
 
-    toast({
-      title: 'Post created!',
-      description: 'Your post has been shared with the community.',
-    });
-    setNewPost('');
+    try {
+      if (isSupabaseConfigured) {
+        await createPost(newPost);
+      }
+      toast({
+        title: 'Post created!',
+        description: 'Your post has been shared with the community.',
+      });
+      setNewPost('');
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
   };
+
+  if (isLoading && isSupabaseConfigured) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-white to-amber-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-lg font-medium text-gray-600">Loading community posts...</p>
+        </div>
+      </div>
+    );
+  }
 
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
@@ -35,37 +77,51 @@ export function CommunityPage() {
   };
 
   return (
-    <div className="min-h-screen">
-      <div className="container mx-auto px-4 py-8 max-w-3xl">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <div className="container mx-auto px-4 py-6 md:py-8 max-w-3xl">
+        {/* Header */}
         <div className="mb-8">
-          <h1 className="text-4xl font-extrabold font-['Space_Grotesk'] mb-2">
-            Community
-          </h1>
-          <p className="text-muted-foreground">
-            Share your experiences and connect with other users
-          </p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
+                Community
+              </h1>
+              <p className="text-gray-500 mt-1">
+                Share your experiences and connect with other users
+              </p>
+            </div>
+            <Button
+              onClick={handleJoinChannel}
+              className="rounded-xl bg-[#0088cc] text-white hover:bg-[#0077b5] shadow-lg shadow-[#0088cc]/25 font-semibold"
+            >
+              <ExternalLink className="h-4 w-4 mr-2" />
+              Join Telegram
+            </Button>
+          </div>
         </div>
 
         {/* Create Post */}
         {user && (
-          <div className="brutalist-card p-6 mb-8">
-            <div className="flex items-start space-x-4">
-              <Avatar>
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-8 shadow-sm">
+            <div className="flex items-start gap-4">
+              <Avatar className="h-10 w-10 border-2 border-gray-100">
                 <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} />
-                <AvatarFallback>{user.name[0]}</AvatarFallback>
+                <AvatarFallback className="bg-gradient-to-br from-teal-500 to-emerald-600 text-white">
+                  {user.name[0]}
+                </AvatarFallback>
               </Avatar>
               <div className="flex-1 space-y-3">
                 <Textarea
                   placeholder="Share your experience with the community..."
                   value={newPost}
                   onChange={(e) => setNewPost(e.target.value)}
-                  className="border-2 border-black min-h-[100px] resize-none"
+                  className="border-2 border-gray-200 rounded-xl min-h-[100px] resize-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
                 />
                 <div className="flex justify-end">
                   <Button
                     onClick={handleCreatePost}
                     disabled={!newPost.trim()}
-                    className="brutalist-button bg-primary text-primary-foreground hover:bg-primary/90"
+                    className="rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-semibold shadow-lg shadow-teal-500/25"
                   >
                     <Send className="h-4 w-4 mr-2" />
                     Post
@@ -78,30 +134,35 @@ export function CommunityPage() {
 
         {/* Posts Feed */}
         <div className="space-y-4">
-          {mockCommunityPosts.map(post => (
-            <div key={post.id} className="brutalist-card p-6 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">
-              <div className="flex items-start space-x-4">
-                <Avatar className="border-2 border-black">
+          {posts.map(post => (
+            <div key={post.id} className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg hover:border-gray-300 transition-all">
+              <div className="flex items-start gap-4">
+                <Avatar className="h-10 w-10 border-2 border-gray-100">
                   <AvatarImage src={post.userAvatar} />
-                  <AvatarFallback>{post.userName[0]}</AvatarFallback>
+                  <AvatarFallback className="bg-gradient-to-br from-teal-500 to-emerald-600 text-white">
+                    {post.userName[0]}
+                  </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <p className="font-semibold">{post.userName}</p>
-                      <p className="text-sm text-muted-foreground font-mono">
+                      <p className="font-semibold text-gray-900">{post.userName}</p>
+                      <p className="text-sm text-gray-500">
                         {formatTimeAgo(post.createdAt)}
                       </p>
                     </div>
                   </div>
-                  <p className="text-foreground mb-4 leading-relaxed">{post.content}</p>
-                  <div className="flex items-center space-x-6">
-                    <button className="flex items-center space-x-2 text-muted-foreground hover:text-red-500 transition-colors">
-                      <Heart className="h-5 w-5" />
+                  <p className="text-gray-700 mb-4 leading-relaxed">{post.content}</p>
+                  <div className="flex items-center gap-6">
+                    <button 
+                      onClick={() => likePost(post.id)}
+                      className="flex items-center gap-2 text-gray-500 hover:text-red-500 transition-colors group"
+                    >
+                      <Heart className="h-5 w-5 group-hover:scale-110 transition-transform" />
                       <span className="text-sm font-semibold">{post.likes}</span>
                     </button>
-                    <button className="flex items-center space-x-2 text-muted-foreground hover:text-primary transition-colors">
-                      <MessageCircle className="h-5 w-5" />
+                    <button className="flex items-center gap-2 text-gray-500 hover:text-teal-600 transition-colors group">
+                      <MessageCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
                       <span className="text-sm font-semibold">{post.comments}</span>
                     </button>
                   </div>
@@ -112,13 +173,19 @@ export function CommunityPage() {
         </div>
 
         {!user && (
-          <div className="brutalist-card p-8 text-center mt-8 bg-muted/30">
-            <p className="text-lg font-semibold mb-4">
-              Join the community to share your experiences
+          <div className="bg-gradient-to-br from-teal-50 to-emerald-50 rounded-2xl p-8 text-center mt-8 border border-teal-100">
+            <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Users className="h-8 w-8 text-teal-600" />
+            </div>
+            <p className="text-lg font-semibold text-gray-900 mb-2">
+              Join the community
+            </p>
+            <p className="text-gray-600 mb-6">
+              Sign up to share your experiences and connect with other users
             </p>
             <Button
               onClick={() => window.location.href = '/register'}
-              className="brutalist-button bg-primary text-primary-foreground hover:bg-primary/90"
+              className="rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-semibold shadow-lg shadow-teal-500/25"
             >
               Sign Up Now
             </Button>

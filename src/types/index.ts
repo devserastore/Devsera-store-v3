@@ -1,5 +1,12 @@
 export type OrderStatus = 'PENDING' | 'SUBMITTED' | 'COMPLETED' | 'CANCELLED';
 
+// Delivery types for products
+export type DeliveryType = 
+  | 'CREDENTIALS'      // Admin provides username/password
+  | 'COUPON_CODE'      // Admin provides coupon/license key
+  | 'MANUAL_ACTIVATION' // User provides their ID/email, admin activates on their account
+  | 'INSTANT_KEY';     // Pre-loaded keys that auto-deliver
+
 export interface Product {
   id: string;
   name: string;
@@ -10,6 +17,26 @@ export interface Product {
   duration: string;
   features: string[];
   category: string;
+  deliveryType: DeliveryType;
+  deliveryInstructions?: string; // Instructions shown to user based on delivery type
+  requiresUserInput?: boolean;   // If true, user must provide their account details
+  userInputLabel?: string;       // Label for user input field (e.g., "Your Netflix Email")
+  isActive?: boolean;
+}
+
+export interface OrderCredentials {
+  // For CREDENTIALS type
+  username?: string;
+  password?: string;
+  // For COUPON_CODE / INSTANT_KEY type
+  couponCode?: string;
+  licenseKey?: string;
+  // For MANUAL_ACTIVATION type
+  activationStatus?: string;
+  activationNotes?: string;
+  // Common
+  expiryDate?: string;
+  additionalInfo?: string;
 }
 
 export interface Order {
@@ -19,11 +46,10 @@ export interface Order {
   product?: Product;
   status: OrderStatus;
   paymentScreenshot?: string;
-  credentials?: {
-    username: string;
-    password: string;
-    expiryDate: string;
-  };
+  // User-provided input for MANUAL_ACTIVATION
+  userProvidedInput?: string;
+  // Flexible credentials based on delivery type
+  credentials?: OrderCredentials;
   cancellationReason?: string;
   createdAt: string;
   updatedAt: string;

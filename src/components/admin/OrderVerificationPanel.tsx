@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { mockOrders, mockProducts } from '@/data/mockData';
+import { useAdminOrders } from '@/hooks/useOrders';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -7,42 +7,134 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
-import { CheckCircle2, XCircle, Eye } from 'lucide-react';
-import { Order } from '@/types';
+import { CheckCircle2, XCircle, Eye, Key, Package, UserCheck, Zap, User } from 'lucide-react';
+import { Order, OrderCredentials, DeliveryType } from '@/types';
+import { mockOrders, mockProducts } from '@/data/mockData';
+import { isSupabaseConfigured } from '@/lib/supabase';
+
+const deliveryTypeLabels: Record<DeliveryType, { label: string; icon: React.ReactNode }> = {
+  CREDENTIALS: { label: 'Login Credentials', icon: <Key className="h-4 w-4" /> },
+  COUPON_CODE: { label: 'Coupon/License Key', icon: <Package className="h-4 w-4" /> },
+  MANUAL_ACTIVATION: { label: 'Manual Activation', icon: <UserCheck className="h-4 w-4" /> },
+  INSTANT_KEY: { label: 'Instant Key', icon: <Zap className="h-4 w-4" /> }
+};
 
 export function OrderVerificationPanel() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  const [credentials, setCredentials] = useState({ username: '', password: '', expiryDate: '' });
+  const [credentials, setCredentials] = useState<OrderCredentials>({
+    username: '',
+    password: '',
+    couponCode: '',
+    licenseKey: '',
+    activationStatus: '',
+    activationNotes: '',
+    expiryDate: '',
+    additionalInfo: ''
+  });
   const [rejectionReason, setRejectionReason] = useState('');
   const { toast } = useToast();
+  const { orders: dbOrders, approveOrder, rejectOrder } = useAdminOrders();
 
-  const submittedOrders = mockOrders
-    .filter(o => o.status === 'SUBMITTED')
-    .map(order => ({
-      ...order,
-      product: mockProducts.find(p => p.id === order.productId),
-    }));
+  // Use database orders only, no mock data
+  const orders = dbOrders.map(order => ({
+    ...order,
+    product: mockProducts.find(p => p.id === order.productId),
+  }));
 
-  const handleApprove = () => {
-    if (!credentials.username || !credentials.password || !credentials.expiryDate) {
+  const submittedOrders = orders.filter(o => o.status === 'SUBMITTED');
+
+  const getDeliveryType = (order: Order): DeliveryType => {
+    return order.product?.deliveryType || 'CREDENTIALS';
+  };
+
+  const handleApprove = async () => {
+    if (!selectedOrder) return;
+
+    const deliveryType = getDeliveryType(selectedOrder);
+    let isValid = false;
+    let credentialsToSend: OrderCredentials = { expiryDate: credentials.expiryDate };
+
+    switch (deliveryType) {
+      case 'CREDENTIALS':
+        isValid = !!(credentials.username && credentials.password && credentials.expiryDate);
+        credentialsToSend = {
+          username: credentials.username,
+          password: credentials.password,
+          expiryDate: credentials.expiryDate,
+          additionalInfo: credentials.additionalInfo
+        };
+        break;
+      case 'COUPON_CODE':
+        isValid = !!(credentials.couponCode || credentials.licenseKey);
+        credentialsToSend = {
+          couponCode: credentials.couponCode,
+          licenseKey: credentials.licenseKey,
+          expiryDate: credentials.expiryDate,
+          additionalInfo: credentials.additionalInfo
+        };
+        break;
+      case 'MANUAL_ACTIVATION':
+        isValid = !!credentials.activationStatus;
+        credentialsToSend = {
+          activationStatus: credentials.activationStatus,
+          activationNotes: credentials.activationNotes,
+          expiryDate: credentials.expiryDate,
+          additionalInfo: credentials.additionalInfo
+        };
+        break;
+      case 'INSTANT_KEY':
+        isValid = !!credentials.licenseKey;
+        credentialsToSend = {
+          licenseKey: credentials.licenseKey,
+          expiryDate: credentials.expiryDate,
+          additionalInfo: credentials.additionalInfo
+        };
+        break;
+    }
+
+    if (!isValid) {
       toast({
         title: 'Missing information',
-        description: 'Please fill in all credential fields',
+        description: 'Please fill in all required fields',
         variant: 'destructive',
       });
       return;
     }
 
-    toast({
-      title: 'Order approved!',
-      description: 'Credentials have been sent to the user.',
-    });
-    setSelectedOrder(null);
-    setCredentials({ username: '', password: '', expiryDate: '' });
+    try {
+      if (isSupabaseConfigured) {
+        await approveOrder(selectedOrder.id, credentialsToSend);
+      }
+      toast({
+        title: 'Order approved!',
+        description: 'Credentials have been sent to the user.',
+      });
+      setSelectedOrder(null);
+      resetCredentials();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
   };
 
-  const handleReject = () => {
-    if (!rejectionReason.trim()) {
+  const resetCredentials = () => {
+    setCredentials({
+      username: '',
+      password: '',
+      couponCode: '',
+      licenseKey: '',
+      activationStatus: '',
+      activationNotes: '',
+      expiryDate: '',
+      additionalInfo: ''
+    });
+  };
+
+  const handleReject = async () => {
+    if (!rejectionReason.trim() || !selectedOrder) {
       toast({
         title: 'Reason required',
         description: 'Please provide a reason for rejection',
@@ -51,12 +143,117 @@ export function OrderVerificationPanel() {
       return;
     }
 
-    toast({
-      title: 'Order rejected',
-      description: 'User has been notified of the cancellation.',
-    });
-    setSelectedOrder(null);
-    setRejectionReason('');
+    try {
+      if (isSupabaseConfigured) {
+        await rejectOrder(selectedOrder.id, rejectionReason);
+      }
+      toast({
+        title: 'Order rejected',
+        description: 'User has been notified of the cancellation.',
+      });
+      setSelectedOrder(null);
+      setRejectionReason('');
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const renderCredentialsForm = (deliveryType: DeliveryType) => {
+    switch (deliveryType) {
+      case 'CREDENTIALS':
+        return (
+          <>
+            <div>
+              <Label htmlFor="username">Account Username *</Label>
+              <Input
+                id="username"
+                placeholder="user@service.com"
+                value={credentials.username}
+                onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
+                className="border-2 border-black"
+              />
+            </div>
+            <div>
+              <Label htmlFor="password">Account Password *</Label>
+              <Input
+                id="password"
+                type="text"
+                placeholder="SecurePass123"
+                value={credentials.password}
+                onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
+                className="border-2 border-black"
+              />
+            </div>
+          </>
+        );
+      case 'COUPON_CODE':
+        return (
+          <>
+            <div>
+              <Label htmlFor="couponCode">Coupon Code</Label>
+              <Input
+                id="couponCode"
+                placeholder="PROMO-XXXX-XXXX"
+                value={credentials.couponCode}
+                onChange={(e) => setCredentials({ ...credentials, couponCode: e.target.value })}
+                className="border-2 border-black font-mono"
+              />
+            </div>
+            <div>
+              <Label htmlFor="licenseKey">License Key</Label>
+              <Input
+                id="licenseKey"
+                placeholder="XXXXX-XXXXX-XXXXX-XXXXX"
+                value={credentials.licenseKey}
+                onChange={(e) => setCredentials({ ...credentials, licenseKey: e.target.value })}
+                className="border-2 border-black font-mono"
+              />
+            </div>
+          </>
+        );
+      case 'MANUAL_ACTIVATION':
+        return (
+          <>
+            <div>
+              <Label htmlFor="activationStatus">Activation Status *</Label>
+              <Input
+                id="activationStatus"
+                placeholder="e.g., Activated, Added to Family Plan"
+                value={credentials.activationStatus}
+                onChange={(e) => setCredentials({ ...credentials, activationStatus: e.target.value })}
+                className="border-2 border-black"
+              />
+            </div>
+            <div>
+              <Label htmlFor="activationNotes">Activation Notes</Label>
+              <Textarea
+                id="activationNotes"
+                placeholder="Any additional instructions for the user..."
+                value={credentials.activationNotes}
+                onChange={(e) => setCredentials({ ...credentials, activationNotes: e.target.value })}
+                className="border-2 border-black"
+              />
+            </div>
+          </>
+        );
+      case 'INSTANT_KEY':
+        return (
+          <div>
+            <Label htmlFor="licenseKey">License Key *</Label>
+            <Input
+              id="licenseKey"
+              placeholder="XXXXX-XXXXX-XXXXX-XXXXX"
+              value={credentials.licenseKey}
+              onChange={(e) => setCredentials({ ...credentials, licenseKey: e.target.value })}
+              className="border-2 border-black font-mono"
+            />
+          </div>
+        );
+    }
   };
 
   return (
@@ -84,9 +281,13 @@ export function OrderVerificationPanel() {
                 <div className="flex items-start space-x-4 flex-1">
                   {order.product && (
                     <img
-                      src={order.product.image}
+                      src={order.product.image || 'https://images.unsplash.com/photo-1557821552-17105176677c?w=800&q=80'}
                       alt={order.product.name}
-                      className="w-20 h-20 object-cover rounded-lg border-2 border-black"
+                      className="w-20 h-20 object-cover rounded-lg border-2 border-black bg-gray-100"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = 'https://images.unsplash.com/photo-1557821552-17105176677c?w=800&q=80';
+                      }}
                     />
                   )}
                   <div className="flex-1">
@@ -109,7 +310,20 @@ export function OrderVerificationPanel() {
                       <span className="font-semibold text-primary">
                         ₹{order.product?.salePrice}
                       </span>
+                      <span>•</span>
+                      <span className="flex items-center gap-1">
+                        {deliveryTypeLabels[order.product?.deliveryType || 'CREDENTIALS'].icon}
+                        {deliveryTypeLabels[order.product?.deliveryType || 'CREDENTIALS'].label}
+                      </span>
                     </div>
+                    {order.userProvidedInput && (
+                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
+                        <span className="flex items-center gap-1 text-blue-700">
+                          <User className="h-3 w-3" />
+                          User's Account: <span className="font-mono font-semibold">{order.userProvidedInput}</span>
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <Button
@@ -166,6 +380,21 @@ export function OrderVerificationPanel() {
                       <span className="text-muted-foreground">Amount:</span>
                       <span className="font-bold text-primary">₹{selectedOrder.product?.salePrice}</span>
                     </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Delivery Type:</span>
+                      <span className="flex items-center gap-1 font-semibold">
+                        {deliveryTypeLabels[getDeliveryType(selectedOrder)].icon}
+                        {deliveryTypeLabels[getDeliveryType(selectedOrder)].label}
+                      </span>
+                    </div>
+                    {selectedOrder.userProvidedInput && (
+                      <div className="pt-2 border-t">
+                        <span className="text-muted-foreground">User's Account:</span>
+                        <p className="font-mono font-semibold text-blue-600 mt-1">
+                          {selectedOrder.userProvidedInput}
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -174,31 +403,12 @@ export function OrderVerificationPanel() {
               <div className="space-y-6">
                 {/* Approve Section */}
                 <div className="brutalist-card p-6 border-green-500">
-                  <h3 className="font-bold font-['Space_Grotesk'] mb-4 text-green-600">
-                    Approve Order
+                  <h3 className="font-bold font-['Space_Grotesk'] mb-4 text-green-600 flex items-center gap-2">
+                    {deliveryTypeLabels[getDeliveryType(selectedOrder)].icon}
+                    Approve Order - {deliveryTypeLabels[getDeliveryType(selectedOrder)].label}
                   </h3>
                   <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="username">Account Username</Label>
-                      <Input
-                        id="username"
-                        placeholder="user@service.com"
-                        value={credentials.username}
-                        onChange={(e) => setCredentials({ ...credentials, username: e.target.value })}
-                        className="border-2 border-black"
-                      />
-                    </div>
-                    <div>
-                      <Label htmlFor="password">Account Password</Label>
-                      <Input
-                        id="password"
-                        type="text"
-                        placeholder="SecurePass123"
-                        value={credentials.password}
-                        onChange={(e) => setCredentials({ ...credentials, password: e.target.value })}
-                        className="border-2 border-black"
-                      />
-                    </div>
+                    {renderCredentialsForm(getDeliveryType(selectedOrder))}
                     <div>
                       <Label htmlFor="expiry">Expiry Date</Label>
                       <Input
@@ -209,12 +419,23 @@ export function OrderVerificationPanel() {
                         className="border-2 border-black"
                       />
                     </div>
+                    <div>
+                      <Label htmlFor="additionalInfo">Additional Info (Optional)</Label>
+                      <Textarea
+                        id="additionalInfo"
+                        placeholder="Any extra instructions for the user..."
+                        value={credentials.additionalInfo}
+                        onChange={(e) => setCredentials({ ...credentials, additionalInfo: e.target.value })}
+                        className="border-2 border-black"
+                        rows={2}
+                      />
+                    </div>
                     <Button
                       onClick={handleApprove}
                       className="w-full brutalist-button bg-green-600 text-white hover:bg-green-700"
                     >
                       <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Approve & Send Credentials
+                      Approve & Send to User
                     </Button>
                   </div>
                 </div>

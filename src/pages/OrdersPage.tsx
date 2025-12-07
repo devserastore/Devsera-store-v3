@@ -1,26 +1,48 @@
 import { useState } from 'react';
+import { useOrders } from '@/hooks/useOrders';
 import { mockOrders, mockProducts } from '@/data/mockData';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Copy, Eye, Clock, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
+import { Copy, Eye, Clock, CheckCircle2, XCircle, AlertCircle, Key, Package, UserCheck, Zap } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
-import { Order, OrderStatus } from '@/types';
+import { Order, OrderStatus, DeliveryType } from '@/types';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { isSupabaseConfigured } from '@/lib/supabase';
+
+const deliveryTypeLabels: Record<DeliveryType, { label: string; icon: React.ReactNode }> = {
+  CREDENTIALS: { label: 'Login Credentials', icon: <Key className="h-4 w-4" /> },
+  COUPON_CODE: { label: 'Coupon/License Key', icon: <Package className="h-4 w-4" /> },
+  MANUAL_ACTIVATION: { label: 'Manual Activation', icon: <UserCheck className="h-4 w-4" /> },
+  INSTANT_KEY: { label: 'Instant Key', icon: <Zap className="h-4 w-4" /> }
+};
 
 export function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [filterStatus, setFilterStatus] = useState<OrderStatus | 'ALL'>('ALL');
   const { toast } = useToast();
+  const { orders: dbOrders, isLoading } = useOrders();
 
-  const ordersWithProducts = mockOrders.map(order => ({
+  // Use database orders only, no mock data for new users
+  const orders = dbOrders.map(order => ({
     ...order,
     product: mockProducts.find(p => p.id === order.productId),
   }));
 
   const filteredOrders = filterStatus === 'ALL'
-    ? ordersWithProducts
-    : ordersWithProducts.filter(o => o.status === filterStatus);
+    ? orders
+    : orders.filter(o => o.status === filterStatus);
+
+  if (isLoading && isSupabaseConfigured) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-white to-amber-50">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-lg font-medium text-gray-600">Loading orders...</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -57,87 +79,94 @@ export function OrdersPage() {
   };
 
   return (
-    <div className="min-h-screen">
-      <div className="container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <div className="container mx-auto px-4 py-6 md:py-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-extrabold font-['Space_Grotesk'] mb-2">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
             My Orders
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-gray-500">
             Track and manage your subscription orders
           </p>
         </div>
 
         {/* Filter Tabs */}
-        <Tabs value={filterStatus} onValueChange={(v) => setFilterStatus(v as OrderStatus | 'ALL')} className="mb-6">
-          <TabsList className="border-2 border-black bg-white h-auto p-1">
-            <TabsTrigger value="ALL" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
-              All Orders
-            </TabsTrigger>
-            <TabsTrigger value="PENDING" className="data-[state=active]:bg-amber-500 data-[state=active]:text-white">
-              Pending
-            </TabsTrigger>
-            <TabsTrigger value="SUBMITTED" className="data-[state=active]:bg-blue-500 data-[state=active]:text-white">
-              Submitted
-            </TabsTrigger>
-            <TabsTrigger value="COMPLETED" className="data-[state=active]:bg-green-500 data-[state=active]:text-white">
-              Completed
-            </TabsTrigger>
-            <TabsTrigger value="CANCELLED" className="data-[state=active]:bg-red-500 data-[state=active]:text-white">
-              Cancelled
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="mb-6 overflow-x-auto pb-2">
+          <Tabs value={filterStatus} onValueChange={(v) => setFilterStatus(v as OrderStatus | 'ALL')}>
+            <TabsList className="bg-white border border-gray-200 rounded-xl p-1 inline-flex min-w-max">
+              <TabsTrigger value="ALL" className="rounded-lg data-[state=active]:bg-gray-900 data-[state=active]:text-white px-4">
+                All Orders
+              </TabsTrigger>
+              <TabsTrigger value="PENDING" className="rounded-lg data-[state=active]:bg-amber-500 data-[state=active]:text-white px-4">
+                Pending
+              </TabsTrigger>
+              <TabsTrigger value="SUBMITTED" className="rounded-lg data-[state=active]:bg-blue-500 data-[state=active]:text-white px-4">
+                Submitted
+              </TabsTrigger>
+              <TabsTrigger value="COMPLETED" className="rounded-lg data-[state=active]:bg-emerald-500 data-[state=active]:text-white px-4">
+                Completed
+              </TabsTrigger>
+              <TabsTrigger value="CANCELLED" className="rounded-lg data-[state=active]:bg-red-500 data-[state=active]:text-white px-4">
+                Cancelled
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
 
         {/* Orders List */}
         {filteredOrders.length === 0 ? (
-          <div className="brutalist-card p-12 text-center">
-            <p className="text-muted-foreground text-lg">No orders found</p>
+          <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Package className="h-8 w-8 text-gray-400" />
+            </div>
+            <p className="text-gray-500 text-lg">No orders found</p>
           </div>
         ) : (
           <div className="space-y-4">
             {filteredOrders.map(order => (
-              <div key={order.id} className="brutalist-card p-6 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] transition-all">
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-4 flex-1">
-                    {order.product && (
-                      <img
-                        src={order.product.image}
-                        alt={order.product.name}
-                        className="w-20 h-20 object-cover rounded-lg border-2 border-black"
-                      />
-                    )}
-                    <div className="flex-1">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h3 className="text-lg font-bold font-['Space_Grotesk']">
-                            {order.product?.name}
-                          </h3>
-                          <p className="text-sm font-mono text-muted-foreground">
-                            Order ID: {order.id}
-                          </p>
-                        </div>
-                        <StatusBadge status={order.status} />
+              <div key={order.id} className="bg-white rounded-2xl border border-gray-200 p-4 md:p-6 hover:shadow-lg hover:border-gray-300 transition-all">
+                <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                  {order.product && (
+                    <img
+                      src={order.product.image || 'https://images.unsplash.com/photo-1557821552-17105176677c?w=800&q=80'}
+                      alt={order.product.name}
+                      className="w-full sm:w-20 h-32 sm:h-20 object-cover rounded-xl bg-gray-100"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = 'https://images.unsplash.com/photo-1557821552-17105176677c?w=800&q=80';
+                      }}
+                    />
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900">
+                          {order.product?.name}
+                        </h3>
+                        <p className="text-sm font-mono text-gray-500">
+                          Order ID: {order.id}
+                        </p>
                       </div>
-                      <div className="flex items-center space-x-4 text-sm text-muted-foreground mb-3">
-                        <span>
-                          Ordered: {new Date(order.createdAt).toLocaleDateString()}
-                        </span>
-                        <span>•</span>
-                        <span className="font-semibold text-primary">
-                          ₹{order.product?.salePrice}
-                        </span>
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        {getStatusIcon(order.status)}
-                        <span className="text-sm">{getStatusMessage(order.status)}</span>
-                      </div>
+                      <StatusBadge status={order.status} />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 md:gap-4 text-sm text-gray-500 mb-3">
+                      <span>
+                        {new Date(order.createdAt).toLocaleDateString()}
+                      </span>
+                      <span className="hidden md:inline">•</span>
+                      <span className="font-semibold text-gray-900">
+                        ₹{(order.product?.salePrice || 0).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {getStatusIcon(order.status)}
+                      <span className="text-sm text-gray-600">{getStatusMessage(order.status)}</span>
                     </div>
                   </div>
                   <Button
                     onClick={() => setSelectedOrder(order)}
                     variant="outline"
-                    className="brutalist-button ml-4"
+                    className="w-full sm:w-auto rounded-xl border-2 border-gray-200 hover:border-teal-500 hover:text-teal-600"
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     View Details
@@ -215,41 +244,111 @@ export function OrdersPage() {
                 {/* Credentials */}
                 {selectedOrder.status === 'COMPLETED' && selectedOrder.credentials && (
                   <div className="border-t-2 border-black pt-6">
-                    <h3 className="font-bold font-['Space_Grotesk'] mb-4">
-                      Account Credentials
+                    <h3 className="font-bold font-['Space_Grotesk'] mb-4 flex items-center gap-2">
+                      {deliveryTypeLabels[selectedOrder.product?.deliveryType || 'CREDENTIALS'].icon}
+                      {selectedOrder.product?.deliveryType === 'MANUAL_ACTIVATION' 
+                        ? 'Activation Status' 
+                        : selectedOrder.product?.deliveryType === 'COUPON_CODE' || selectedOrder.product?.deliveryType === 'INSTANT_KEY'
+                        ? 'Your License/Code'
+                        : 'Account Credentials'}
                     </h3>
                     <div className="space-y-3">
-                      <div className="bg-muted p-4 rounded-lg border-2 border-black">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-semibold">Username</span>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleCopy(selectedOrder.credentials!.username, 'Username')}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
+                      {/* Username/Password for CREDENTIALS type */}
+                      {selectedOrder.credentials.username && (
+                        <div className="bg-muted p-4 rounded-lg border-2 border-black">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-semibold">Username</span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleCopy(selectedOrder.credentials!.username!, 'Username')}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <p className="font-mono text-sm">{selectedOrder.credentials.username}</p>
                         </div>
-                        <p className="font-mono text-sm">{selectedOrder.credentials.username}</p>
-                      </div>
-                      <div className="bg-muted p-4 rounded-lg border-2 border-black">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-sm font-semibold">Password</span>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => handleCopy(selectedOrder.credentials!.password, 'Password')}
-                          >
-                            <Copy className="h-4 w-4" />
-                          </Button>
+                      )}
+                      {selectedOrder.credentials.password && (
+                        <div className="bg-muted p-4 rounded-lg border-2 border-black">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-semibold">Password</span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleCopy(selectedOrder.credentials!.password!, 'Password')}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <p className="font-mono text-sm">{selectedOrder.credentials.password}</p>
                         </div>
-                        <p className="font-mono text-sm">{selectedOrder.credentials.password}</p>
-                      </div>
-                      <div className="bg-amber-50 border-2 border-amber-500 p-4 rounded-lg">
-                        <p className="text-sm font-semibold text-amber-800">
-                          ⚠️ Expires on: {new Date(selectedOrder.credentials.expiryDate).toLocaleDateString()}
-                        </p>
-                      </div>
+                      )}
+
+                      {/* Coupon Code */}
+                      {selectedOrder.credentials.couponCode && (
+                        <div className="bg-purple-50 p-4 rounded-lg border-2 border-purple-500">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-semibold text-purple-700">Coupon Code</span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleCopy(selectedOrder.credentials!.couponCode!, 'Coupon Code')}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <p className="font-mono text-lg font-bold text-purple-700">{selectedOrder.credentials.couponCode}</p>
+                        </div>
+                      )}
+
+                      {/* License Key */}
+                      {selectedOrder.credentials.licenseKey && (
+                        <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-500">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm font-semibold text-blue-700">License Key</span>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleCopy(selectedOrder.credentials!.licenseKey!, 'License Key')}
+                            >
+                              <Copy className="h-4 w-4" />
+                            </Button>
+                          </div>
+                          <p className="font-mono text-lg font-bold text-blue-700">{selectedOrder.credentials.licenseKey}</p>
+                        </div>
+                      )}
+
+                      {/* Activation Status for MANUAL_ACTIVATION */}
+                      {selectedOrder.credentials.activationStatus && (
+                        <div className="bg-green-50 p-4 rounded-lg border-2 border-green-500">
+                          <div className="flex items-center gap-2 mb-2">
+                            <CheckCircle2 className="h-5 w-5 text-green-600" />
+                            <span className="text-sm font-semibold text-green-700">Activation Status</span>
+                          </div>
+                          <p className="font-semibold text-green-700">{selectedOrder.credentials.activationStatus}</p>
+                          {selectedOrder.credentials.activationNotes && (
+                            <p className="text-sm text-green-600 mt-2">{selectedOrder.credentials.activationNotes}</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Additional Info */}
+                      {selectedOrder.credentials.additionalInfo && (
+                        <div className="bg-gray-50 p-4 rounded-lg border-2 border-gray-300">
+                          <span className="text-sm font-semibold">Additional Instructions</span>
+                          <p className="text-sm mt-1">{selectedOrder.credentials.additionalInfo}</p>
+                        </div>
+                      )}
+
+                      {/* Expiry Warning */}
+                      {selectedOrder.credentials.expiryDate && (
+                        <div className="bg-amber-50 border-2 border-amber-500 p-4 rounded-lg">
+                          <p className="text-sm font-semibold text-amber-800">
+                            ⚠️ Expires on: {new Date(selectedOrder.credentials.expiryDate).toLocaleDateString()}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
