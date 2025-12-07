@@ -34,9 +34,14 @@ export function CheckoutPage() {
   const { settings: dbSettings, isLoading: settingsLoading } = useSettings();
   const { createOrder, uploadPaymentScreenshot } = useOrders();
 
-  // Use mock data if Supabase is not configured
-  const product = isSupabaseConfigured && dbProduct ? dbProduct : mockProducts.find(p => p.id === id);
-  const settings = isSupabaseConfigured && dbSettings ? dbSettings : mockSettings;
+  // Use database data if available, otherwise fall back to mock data
+  const product = dbProduct || (!isSupabaseConfigured ? mockProducts.find(p => p.id === id) : null);
+  const settings = dbSettings || (!isSupabaseConfigured ? mockSettings : null);
+  
+  // Debug log to check settings
+  useEffect(() => {
+    console.log('Settings loaded:', { dbSettings, settings, isSupabaseConfigured });
+  }, [dbSettings, settings]);
 
   useEffect(() => {
     if (product && !orderId && isSupabaseConfigured) {
@@ -227,20 +232,29 @@ export function CheckoutPage() {
 
           {/* Payment Section */}
           <div className="space-y-6">
+            {/* Debug info - remove in production */}
+            {!settings && (
+              <div className="bg-yellow-50 border-2 border-yellow-300 rounded-xl p-4 text-center">
+                <p className="text-sm text-yellow-700">Loading payment settings...</p>
+              </div>
+            )}
+            
             {/* QR Code */}
             <div className="bg-white rounded-2xl border-2 border-black p-6 text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
               <h2 className="text-xl font-bold text-gray-900 mb-4">
                 Scan QR Code
               </h2>
               <div className="inline-block rounded-xl overflow-hidden border-4 border-black shadow-lg">
-                {settings?.qrCodeUrl ? (
+                {settings?.qrCodeUrl && settings.qrCodeUrl.length > 0 ? (
                   <img
                     src={settings.qrCodeUrl}
                     alt="Payment QR Code"
                     className="w-64 h-64 object-contain bg-white"
                     onError={(e) => {
+                      console.error('QR Code image failed to load');
                       const target = e.target as HTMLImageElement;
                       target.style.display = 'none';
+                      target.parentElement!.innerHTML = '<div class="w-64 h-64 bg-gray-100 flex flex-col items-center justify-center"><p class="text-sm text-gray-500">QR Code failed to load</p></div>';
                     }}
                   />
                 ) : (
@@ -259,19 +273,23 @@ export function CheckoutPage() {
                 Or Pay Using UPI ID
               </Label>
               <div className="flex items-center gap-2">
-                <div className="flex-1 font-mono text-lg font-bold bg-teal-50 text-[#0A7A7A] p-4 rounded-xl border-2 border-teal-200">
-                  {settings?.upiId || 'UPI ID not configured'}
+                <div className={`flex-1 font-mono text-lg font-bold p-4 rounded-xl border-2 ${
+                  settings?.upiId && settings.upiId.length > 0
+                    ? 'bg-teal-50 text-[#0A7A7A] border-teal-200'
+                    : 'bg-gray-100 text-gray-500 border-gray-200'
+                }`}>
+                  {settings?.upiId && settings.upiId.length > 0 ? settings.upiId : 'Loading UPI ID...'}
                 </div>
                 <Button
                   onClick={handleCopyUPI}
-                  disabled={!settings?.upiId}
+                  disabled={!settings?.upiId || settings.upiId.length === 0}
                   variant="outline"
                   className="rounded-xl border-2 border-black hover:bg-teal-50 hover:text-[#0A7A7A] h-14 px-4"
                 >
                   <Copy className="h-5 w-5" />
                 </Button>
               </div>
-              {settings?.upiId && (
+              {settings?.upiId && settings.upiId.length > 0 && (
                 <p className="text-xs text-gray-500 mt-2">
                   Click the copy button to copy UPI ID to clipboard
                 </p>

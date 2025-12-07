@@ -40,6 +40,7 @@ export function useSettings() {
       if (error) throw error;
 
       if (data) {
+        console.log('Settings loaded from database:', data);
         setSettingsId(data.id);
         setSettings({
           upiId: data.upi_id || '',
@@ -87,6 +88,8 @@ export function useSettings() {
   };
 
   const updateSettings = async (newSettings: Settings) => {
+    console.log('Updating settings:', newSettings);
+    
     if (!isSupabaseConfigured) {
       // Save to localStorage
       localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(newSettings));
@@ -115,6 +118,8 @@ export function useSettings() {
       }
       
       updateData.updated_at = new Date().toISOString();
+      
+      console.log('Update data:', updateData, 'Settings ID:', settingsId);
 
       if (settingsId) {
         // Update existing settings
@@ -123,7 +128,11 @@ export function useSettings() {
           .update(updateData)
           .eq('id', settingsId);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase update error:', error);
+          throw error;
+        }
+        console.log('Settings updated successfully');
       } else {
         // Insert new settings if no ID
         const { data, error } = await supabase
@@ -143,6 +152,9 @@ export function useSettings() {
       }
 
       setSettings(newSettings);
+      
+      // Reload settings to ensure we have the latest data
+      await loadSettings();
     } catch (err) {
       console.error('Error updating settings:', err);
       throw err;
