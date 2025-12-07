@@ -40,7 +40,7 @@ export function CheckoutPage() {
 
   useEffect(() => {
     if (product && !orderId && isSupabaseConfigured) {
-      createOrder(product.id).then((order) => {
+      createOrder(product.id, undefined, product.salePrice).then((order) => {
         setOrderId(order.id);
       }).catch((error) => {
         toast({
@@ -167,7 +167,7 @@ export function CheckoutPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
           {/* Order Summary */}
           <div className="space-y-6">
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+            <div className="bg-white rounded-2xl border-2 border-black p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
               <h2 className="text-xl font-bold text-gray-900 mb-4">
                 Order Summary
               </h2>
@@ -175,18 +175,25 @@ export function CheckoutPage() {
                 <img
                   src={product.image || 'https://images.unsplash.com/photo-1557821552-17105176677c?w=800&q=80'}
                   alt={product.name}
-                  className="w-20 h-20 object-cover rounded-xl bg-gray-100"
+                  className="w-20 h-20 object-cover rounded-xl bg-gray-100 border-2 border-black"
                   onError={(e) => {
                     const target = e.target as HTMLImageElement;
                     target.src = 'https://images.unsplash.com/photo-1557821552-17105176677c?w=800&q=80';
                   }}
                 />
                 <div className="flex-1">
-                  <h3 className="font-semibold text-gray-900">{product.name}</h3>
+                  <h3 className="font-bold text-gray-900 text-lg">{product.name}</h3>
                   <p className="text-sm text-gray-500">{product.duration}</p>
-                  <p className="text-2xl font-bold text-gray-900 mt-2">
-                    ₹{(product.salePrice || 0).toLocaleString()}
-                  </p>
+                  <div className="mt-2">
+                    {product.originalPrice > product.salePrice && (
+                      <span className="line-through text-gray-400 text-sm mr-2">
+                        ₹{(product.originalPrice || 0).toLocaleString()}
+                      </span>
+                    )}
+                    <span className="text-2xl font-bold text-[#0A7A7A]">
+                      ₹{(product.salePrice || 0).toLocaleString()}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -221,36 +228,54 @@ export function CheckoutPage() {
           {/* Payment Section */}
           <div className="space-y-6">
             {/* QR Code */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 text-center shadow-sm">
+            <div className="bg-white rounded-2xl border-2 border-black p-6 text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
               <h2 className="text-xl font-bold text-gray-900 mb-4">
                 Scan QR Code
               </h2>
-              <div className="inline-block rounded-2xl overflow-hidden shadow-xl">
-                <img
-                  src={settings?.qrCodeUrl}
-                  alt="Payment QR Code"
-                  className="w-64 h-64"
-                />
+              <div className="inline-block rounded-xl overflow-hidden border-4 border-black shadow-lg">
+                {settings?.qrCodeUrl ? (
+                  <img
+                    src={settings.qrCodeUrl}
+                    alt="Payment QR Code"
+                    className="w-64 h-64 object-contain bg-white"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.style.display = 'none';
+                    }}
+                  />
+                ) : (
+                  <div className="w-64 h-64 bg-gray-100 flex flex-col items-center justify-center">
+                    <Package className="h-12 w-12 text-gray-400 mb-2" />
+                    <p className="text-sm text-gray-500">QR Code not available</p>
+                    <p className="text-xs text-gray-400">Use UPI ID below</p>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* UPI ID */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
+            <div className="bg-white rounded-2xl border-2 border-black p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
               <Label className="text-sm font-semibold text-gray-700 mb-2 block">
                 Or Pay Using UPI ID
               </Label>
               <div className="flex items-center gap-2">
-                <div className="flex-1 font-mono text-lg font-semibold bg-gray-100 p-3 rounded-xl">
-                  {settings?.upiId}
+                <div className="flex-1 font-mono text-lg font-bold bg-teal-50 text-[#0A7A7A] p-4 rounded-xl border-2 border-teal-200">
+                  {settings?.upiId || 'UPI ID not configured'}
                 </div>
                 <Button
                   onClick={handleCopyUPI}
+                  disabled={!settings?.upiId}
                   variant="outline"
-                  className="rounded-xl border-2 border-gray-200 hover:border-teal-500 hover:text-teal-600"
+                  className="rounded-xl border-2 border-black hover:bg-teal-50 hover:text-[#0A7A7A] h-14 px-4"
                 >
-                  <Copy className="h-4 w-4" />
+                  <Copy className="h-5 w-5" />
                 </Button>
               </div>
+              {settings?.upiId && (
+                <p className="text-xs text-gray-500 mt-2">
+                  Click the copy button to copy UPI ID to clipboard
+                </p>
+              )}
             </div>
 
             {/* Delivery Info */}
@@ -297,11 +322,15 @@ export function CheckoutPage() {
             )}
 
             {/* Upload Screenshot */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 shadow-sm">
-              <Label className="text-sm font-semibold text-gray-700 mb-2 block">
-                Upload Payment Screenshot
+            <div className="bg-white rounded-2xl border-2 border-black p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+              <Label className="text-sm font-semibold text-gray-700 mb-3 block">
+                Upload Payment Screenshot <span className="text-red-500">*</span>
               </Label>
-              <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-teal-400 transition-colors">
+              <div className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${
+                screenshot 
+                  ? 'border-emerald-400 bg-emerald-50' 
+                  : 'border-gray-300 hover:border-[#0A7A7A] hover:bg-teal-50'
+              }`}>
                 <input
                   type="file"
                   accept="image/*"
@@ -315,18 +344,18 @@ export function CheckoutPage() {
                 >
                   {screenshot ? (
                     <>
-                      <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center">
+                      <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center border-2 border-emerald-300">
                         <CheckCircle2 className="h-8 w-8 text-emerald-600" />
                       </div>
-                      <p className="font-semibold text-emerald-600">{screenshot.name}</p>
-                      <p className="text-xs text-gray-500">Click to change</p>
+                      <p className="font-semibold text-emerald-700">{screenshot.name}</p>
+                      <p className="text-xs text-emerald-600">Click to change file</p>
                     </>
                   ) : (
                     <>
-                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center border-2 border-gray-200">
                         <Upload className="h-8 w-8 text-gray-400" />
                       </div>
-                      <p className="font-semibold text-gray-700">Click to upload</p>
+                      <p className="font-semibold text-gray-700">Click to upload screenshot</p>
                       <p className="text-xs text-gray-500">PNG, JPG up to 10MB</p>
                     </>
                   )}
@@ -346,7 +375,7 @@ export function CheckoutPage() {
             <Button
               onClick={handleSubmit}
               disabled={!screenshot || isUploading || (product.requiresUserInput && !userInput.trim())}
-              className="w-full h-12 text-lg font-semibold rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white shadow-lg shadow-teal-500/25 hover:shadow-teal-500/40 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full h-14 text-lg font-bold rounded-xl bg-[#0A7A7A] hover:bg-[#086666] text-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isUploading ? 'Submitting...' : 'Submit Payment Proof'}
             </Button>
@@ -355,14 +384,25 @@ export function CheckoutPage() {
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
               <p className="text-sm text-center text-gray-600">
                 Need help?{' '}
-                <a
-                  href="https://t.me/karthik_nkn"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[#0088cc] font-bold hover:underline"
-                >
-                  Contact @karthik_nkn on Telegram
-                </a>
+                {settings?.telegramLink ? (
+                  <a
+                    href={settings.telegramLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#0088cc] font-bold hover:underline"
+                  >
+                    Contact us on Telegram
+                  </a>
+                ) : settings?.contactEmail ? (
+                  <a
+                    href={`mailto:${settings.contactEmail}`}
+                    className="text-[#0A7A7A] font-bold hover:underline"
+                  >
+                    Email us at {settings.contactEmail}
+                  </a>
+                ) : (
+                  <span className="text-gray-500">Contact support</span>
+                )}
               </p>
             </div>
           </div>

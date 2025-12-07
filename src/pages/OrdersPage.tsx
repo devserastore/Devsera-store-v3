@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { useOrders } from '@/hooks/useOrders';
-import { mockOrders, mockProducts } from '@/data/mockData';
 import { StatusBadge } from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Copy, Eye, Clock, CheckCircle2, XCircle, AlertCircle, Key, Package, UserCheck, Zap } from 'lucide-react';
+import { Copy, Eye, Clock, CheckCircle2, XCircle, AlertCircle, Key, Package, UserCheck, Zap, RefreshCw } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Order, OrderStatus, DeliveryType } from '@/types';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,13 +20,10 @@ export function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [filterStatus, setFilterStatus] = useState<OrderStatus | 'ALL'>('ALL');
   const { toast } = useToast();
-  const { orders: dbOrders, isLoading } = useOrders();
+  const { orders: dbOrders, isLoading, refetch } = useOrders();
 
-  // Use database orders only, no mock data for new users
-  const orders = dbOrders.map(order => ({
-    ...order,
-    product: mockProducts.find(p => p.id === order.productId),
-  }));
+  // Use database orders with their associated products
+  const orders = dbOrders;
 
   const filteredOrders = filterStatus === 'ALL'
     ? orders
@@ -37,7 +33,7 @@ export function OrdersPage() {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-white to-amber-50">
         <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <RefreshCw className="w-12 h-12 animate-spin text-[#0A7A7A] mx-auto mb-4" />
           <p className="text-lg font-medium text-gray-600">Loading orders...</p>
         </div>
       </div>
@@ -81,13 +77,24 @@ export function OrdersPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <div className="container mx-auto px-4 py-6 md:py-8">
-        <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-            My Orders
-          </h1>
-          <p className="text-gray-500">
-            Track and manage your subscription orders
-          </p>
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
+          <div>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+              My Orders
+            </h1>
+            <p className="text-gray-500">
+              Track and manage your subscription orders
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            onClick={refetch}
+            disabled={isLoading}
+            className="border-2 border-black hover:bg-gray-100 w-fit"
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
         </div>
 
         {/* Filter Tabs */}
@@ -115,22 +122,36 @@ export function OrdersPage() {
 
         {/* Orders List */}
         {filteredOrders.length === 0 ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-12 text-center">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Package className="h-8 w-8 text-gray-400" />
+          <div className="bg-white rounded-2xl border-2 border-black p-12 text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-gray-200">
+              <Package className="h-10 w-10 text-gray-400" />
             </div>
-            <p className="text-gray-500 text-lg">No orders found</p>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">No orders found</h3>
+            <p className="text-gray-500 mb-6">
+              {filterStatus === 'ALL' 
+                ? "You haven't placed any orders yet. Browse our products to get started!"
+                : `No ${filterStatus.toLowerCase()} orders found.`}
+            </p>
+            {filterStatus !== 'ALL' && (
+              <Button
+                variant="outline"
+                onClick={() => setFilterStatus('ALL')}
+                className="border-2 border-black"
+              >
+                View All Orders
+              </Button>
+            )}
           </div>
         ) : (
           <div className="space-y-4">
             {filteredOrders.map(order => (
-              <div key={order.id} className="bg-white rounded-2xl border border-gray-200 p-4 md:p-6 hover:shadow-lg hover:border-gray-300 transition-all">
+              <div key={order.id} className="bg-white rounded-2xl border-2 border-black p-4 md:p-6 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">
                 <div className="flex flex-col sm:flex-row sm:items-start gap-4">
                   {order.product && (
                     <img
                       src={order.product.image || 'https://images.unsplash.com/photo-1557821552-17105176677c?w=800&q=80'}
                       alt={order.product.name}
-                      className="w-full sm:w-20 h-32 sm:h-20 object-cover rounded-xl bg-gray-100"
+                      className="w-full sm:w-20 h-32 sm:h-20 object-cover rounded-xl bg-gray-100 border-2 border-black"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
                         target.src = 'https://images.unsplash.com/photo-1557821552-17105176677c?w=800&q=80';
@@ -141,10 +162,10 @@ export function OrdersPage() {
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
                       <div>
                         <h3 className="text-lg font-bold text-gray-900">
-                          {order.product?.name}
+                          {order.product?.name || 'Unknown Product'}
                         </h3>
                         <p className="text-sm font-mono text-gray-500">
-                          Order ID: {order.id}
+                          Order ID: {order.id.slice(0, 8)}...
                         </p>
                       </div>
                       <StatusBadge status={order.status} />
@@ -154,7 +175,7 @@ export function OrdersPage() {
                         {new Date(order.createdAt).toLocaleDateString()}
                       </span>
                       <span className="hidden md:inline">•</span>
-                      <span className="font-semibold text-gray-900">
+                      <span className="font-bold text-[#0A7A7A] text-lg">
                         ₹{(order.product?.salePrice || 0).toLocaleString()}
                       </span>
                     </div>
@@ -166,7 +187,7 @@ export function OrdersPage() {
                   <Button
                     onClick={() => setSelectedOrder(order)}
                     variant="outline"
-                    className="w-full sm:w-auto rounded-xl border-2 border-gray-200 hover:border-teal-500 hover:text-teal-600"
+                    className="w-full sm:w-auto rounded-xl border-2 border-black hover:bg-[#0A7A7A] hover:text-white hover:border-[#0A7A7A]"
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     View Details
@@ -179,8 +200,8 @@ export function OrdersPage() {
 
         {/* Order Detail Dialog */}
         <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-          <DialogContent className="brutalist-card max-w-2xl">
-            <DialogHeader>
+          <DialogContent className="max-w-2xl border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
+            <DialogHeader className="border-b-2 border-black pb-4">
               <DialogTitle className="text-2xl font-bold font-['Space_Grotesk']">
                 Order Details
               </DialogTitle>

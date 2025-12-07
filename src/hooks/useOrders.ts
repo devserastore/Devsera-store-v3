@@ -72,8 +72,19 @@ export function useOrders() {
     }
   };
 
-  const createOrder = async (productId: string, userProvidedInput?: string) => {
+  const createOrder = async (productId: string, userProvidedInput?: string, totalAmount?: number) => {
     if (!user) throw new Error('User not authenticated');
+
+    // First get the product to get the price
+    const { data: productData, error: productError } = await supabase
+      .from('products')
+      .select('sale_price')
+      .eq('id', productId)
+      .single();
+
+    if (productError) throw productError;
+
+    const amount = totalAmount || productData?.sale_price || 0;
 
     const { data, error } = await supabase
       .from('orders')
@@ -82,6 +93,7 @@ export function useOrders() {
         product_id: productId,
         status: 'PENDING',
         user_provided_input: userProvidedInput || null,
+        total_amount: amount,
       })
       .select()
       .single();
