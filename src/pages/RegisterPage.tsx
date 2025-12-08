@@ -1,23 +1,33 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useNavigate, Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/components/ui/use-toast';
-import { UserPlus, Mail, Lock, User, ShoppingBag, Check } from 'lucide-react';
+import { UserPlus, Mail, Lock, User, ShoppingBag, Check, Gift } from 'lucide-react';
 
 export function RegisterPage() {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [referralCode, setReferralCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { register, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
 
   const from = (location.state as any)?.from || '/';
+
+  // Get referral code from URL
+  useEffect(() => {
+    const refCode = searchParams.get('ref');
+    if (refCode) {
+      setReferralCode(refCode.toUpperCase());
+    }
+  }, [searchParams]);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -32,10 +42,28 @@ export function RegisterPage() {
 
     try {
       await register(email, password, name);
-      toast({
-        title: 'Account created!',
-        description: 'Welcome to Devsera Store.',
-      });
+      
+      // Apply referral code if provided
+      if (referralCode.trim()) {
+        try {
+          // Store referral code in localStorage to apply after first purchase
+          localStorage.setItem('pendingReferralCode', referralCode.trim());
+          toast({
+            title: 'Account created!',
+            description: `Welcome! Your referral code ${referralCode} will be applied.`,
+          });
+        } catch {
+          toast({
+            title: 'Account created!',
+            description: 'Welcome to Devsera Store.',
+          });
+        }
+      } else {
+        toast({
+          title: 'Account created!',
+          description: 'Welcome to Devsera Store.',
+        });
+      }
     } catch (error: any) {
       console.error('Registration error:', error);
       let errorMessage = 'Please try again.';
@@ -166,6 +194,26 @@ export function RegisterPage() {
               <p className="text-xs text-gray-500 ml-1">
                 Must be at least 6 characters
               </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="referral" className="text-gray-700 font-medium flex items-center gap-2">
+                <Gift className="h-4 w-4 text-purple-500" />
+                Referral Code (Optional)
+              </Label>
+              <Input
+                id="referral"
+                type="text"
+                placeholder="Enter referral code"
+                value={referralCode}
+                onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                className="h-12 border-2 border-gray-200 rounded-xl focus:border-purple-500 focus:ring-2 focus:ring-purple-500/20 uppercase"
+              />
+              {referralCode && (
+                <p className="text-xs text-purple-600 ml-1">
+                  🎁 You'll receive 50 bonus points after your first purchase!
+                </p>
+              )}
             </div>
 
             <Button

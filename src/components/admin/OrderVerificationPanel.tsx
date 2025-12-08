@@ -107,7 +107,7 @@ export function OrderVerificationPanel() {
       }
       toast({
         title: 'Order approved!',
-        description: 'Credentials have been sent to the user.',
+        description: 'Credentials sent to user. Loyalty points awarded automatically.',
       });
       setSelectedOrder(null);
       resetCredentials();

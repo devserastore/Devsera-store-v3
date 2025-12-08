@@ -4,7 +4,7 @@ import { useProducts } from '@/hooks/useProducts';
 import { useAdminTickets } from '@/hooks/useTickets';
 import { useAdminBundles } from '@/hooks/useBundles';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, ShoppingBag, Clock, CheckCircle2, XCircle, Users, MessageSquare, Package, Ticket, TrendingUp, Activity, BarChart3, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { DollarSign, ShoppingBag, Clock, CheckCircle2, XCircle, Users, MessageSquare, Package, Ticket, TrendingUp, Activity, BarChart3, ArrowUpRight, ArrowDownRight, Gift } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OrderVerificationPanel } from '@/components/admin/OrderVerificationPanel';
 import { AccountPoolManager } from '@/components/admin/AccountPoolManager';
@@ -14,6 +14,7 @@ import { CustomerManager } from '@/components/admin/CustomerManager';
 import { CommunityManager } from '@/components/admin/CommunityManager';
 import { BundleManager } from '@/components/admin/BundleManager';
 import { TicketManager } from '@/components/admin/TicketManager';
+import { RewardsManager } from '@/components/admin/RewardsManager';
 import { mockOrders, mockProducts } from '@/data/mockData';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
@@ -303,6 +304,13 @@ export function AdminDashboard() {
               Bundles
             </TabsTrigger>
             <TabsTrigger
+              value="rewards"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white font-semibold rounded-lg"
+            >
+              <Gift className="h-4 w-4 mr-1.5" />
+              Rewards
+            </TabsTrigger>
+            <TabsTrigger
               value="community"
               className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white font-semibold rounded-lg"
             >
@@ -339,6 +347,10 @@ export function AdminDashboard() {
 
           <TabsContent value="bundles">
             <BundleManager />
+          </TabsContent>
+
+          <TabsContent value="rewards">
+            <RewardsManager />
           </TabsContent>
 
           <TabsContent value="community">
