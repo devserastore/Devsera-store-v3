@@ -266,7 +266,7 @@ export function SupportPage() {
                         <SelectValue placeholder="Select order" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">None</SelectItem>
+                        <SelectItem value="none">None</SelectItem>
                         {orders.map((order) => (
                           <SelectItem key={order.id} value={order.id}>
                             {order.product?.name || 'Order'} - {order.id.slice(0, 8)}
