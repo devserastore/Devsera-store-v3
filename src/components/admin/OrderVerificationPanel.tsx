@@ -7,9 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
-import { CheckCircle2, XCircle, Eye, Key, Package, UserCheck, Zap, User } from 'lucide-react';
-import { Order, OrderCredentials, DeliveryType } from '@/types';
-import { mockOrders, mockProducts } from '@/data/mockData';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CheckCircle2, XCircle, Eye, Key, Package, UserCheck, Zap, User, Clock, AlertCircle, Mail } from 'lucide-react';
+import { Order, OrderCredentials, DeliveryType, OrderStatus } from '@/types';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
 const deliveryTypeLabels: Record<DeliveryType, { label: string; icon: React.ReactNode }> = {
@@ -21,11 +21,13 @@ const deliveryTypeLabels: Record<DeliveryType, { label: string; icon: React.Reac
 
 export function OrderVerificationPanel() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [filterStatus, setFilterStatus] = useState<OrderStatus | 'ALL'>('SUBMITTED');
   const [credentials, setCredentials] = useState<OrderCredentials>({
     username: '',
     password: '',
     couponCode: '',
     licenseKey: '',
+    activationLink: '',
     activationStatus: '',
     activationNotes: '',
     expiryDate: '',
@@ -35,12 +37,13 @@ export function OrderVerificationPanel() {
   const { toast } = useToast();
   const { orders: dbOrders, approveOrder, rejectOrder } = useAdminOrders();
 
-  // Use database orders only, no mock data
-  const orders = dbOrders.map(order => ({
-    ...order,
-    product: mockProducts.find(p => p.id === order.productId),
-  }));
+  // Use database orders with their actual product data
+  const orders = dbOrders;
 
+  const filteredOrders = filterStatus === 'ALL' 
+    ? orders 
+    : orders.filter(o => o.status === filterStatus);
+  
   const submittedOrders = orders.filter(o => o.status === 'SUBMITTED');
 
   const getDeliveryType = (order: Order): DeliveryType => {
@@ -65,10 +68,11 @@ export function OrderVerificationPanel() {
         };
         break;
       case 'COUPON_CODE':
-        isValid = !!(credentials.couponCode || credentials.licenseKey);
+        isValid = !!(credentials.couponCode || credentials.licenseKey || credentials.activationLink);
         credentialsToSend = {
           couponCode: credentials.couponCode,
           licenseKey: credentials.licenseKey,
+          activationLink: credentials.activationLink,
           expiryDate: credentials.expiryDate,
           additionalInfo: credentials.additionalInfo
         };
@@ -213,6 +217,17 @@ export function OrderVerificationPanel() {
                 className="border-2 border-black font-mono"
               />
             </div>
+            <div>
+              <Label htmlFor="activationLink">Activation Link (Optional)</Label>
+              <Input
+                id="activationLink"
+                placeholder="https://example.com/activate?code=..."
+                value={credentials.activationLink}
+                onChange={(e) => setCredentials({ ...credentials, activationLink: e.target.value })}
+                className="border-2 border-black"
+              />
+              <p className="text-xs text-muted-foreground mt-1">User can click this link to activate their product</p>
+            </div>
           </>
         );
       case 'MANUAL_ACTIVATION':
@@ -260,22 +275,55 @@ export function OrderVerificationPanel() {
     <div>
       <div className="mb-6">
         <h2 className="text-2xl font-bold font-['Space_Grotesk'] mb-2">
-          Pending Verification
+          Order Management
         </h2>
         <p className="text-muted-foreground">
           Review payment screenshots and approve or reject orders
         </p>
       </div>
 
-      {submittedOrders.length === 0 ? (
+      {/* Filter Tabs */}
+      <div className="mb-6 overflow-x-auto pb-2">
+        <Tabs value={filterStatus} onValueChange={(v) => setFilterStatus(v as OrderStatus | 'ALL')}>
+          <TabsList className="bg-white border border-gray-200 rounded-xl p-1 inline-flex min-w-max">
+            <TabsTrigger value="SUBMITTED" className="rounded-lg data-[state=active]:bg-blue-500 data-[state=active]:text-white px-4">
+              <AlertCircle className="h-4 w-4 mr-2" />
+              Pending ({submittedOrders.length})
+            </TabsTrigger>
+            <TabsTrigger value="ALL" className="rounded-lg data-[state=active]:bg-gray-900 data-[state=active]:text-white px-4">
+              All Orders ({orders.length})
+            </TabsTrigger>
+            <TabsTrigger value="COMPLETED" className="rounded-lg data-[state=active]:bg-emerald-500 data-[state=active]:text-white px-4">
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Completed
+            </TabsTrigger>
+            <TabsTrigger value="PENDING" className="rounded-lg data-[state=active]:bg-amber-500 data-[state=active]:text-white px-4">
+              <Clock className="h-4 w-4 mr-2" />
+              Awaiting Payment
+            </TabsTrigger>
+            <TabsTrigger value="CANCELLED" className="rounded-lg data-[state=active]:bg-red-500 data-[state=active]:text-white px-4">
+              <XCircle className="h-4 w-4 mr-2" />
+              Cancelled
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
+
+      {filteredOrders.length === 0 ? (
         <div className="brutalist-card p-12 text-center">
           <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
-          <p className="text-lg font-semibold">All caught up!</p>
-          <p className="text-muted-foreground">No orders pending verification</p>
+          <p className="text-lg font-semibold">
+            {filterStatus === 'SUBMITTED' ? 'All caught up!' : 'No orders found'}
+          </p>
+          <p className="text-muted-foreground">
+            {filterStatus === 'SUBMITTED' 
+              ? 'No orders pending verification' 
+              : `No ${filterStatus === 'ALL' ? '' : filterStatus.toLowerCase()} orders`}
+          </p>
         </div>
       ) : (
         <div className="space-y-4">
-          {submittedOrders.map(order => (
+          {filteredOrders.map(order => (
             <div key={order.id} className="brutalist-card p-6">
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-4 flex-1">
@@ -294,17 +342,23 @@ export function OrderVerificationPanel() {
                     <div className="flex items-start justify-between mb-2">
                       <div>
                         <h3 className="text-lg font-bold font-['Space_Grotesk']">
-                          {order.product?.name}
+                          {order.product?.name || 'Unknown Product'}
                         </h3>
                         <p className="text-sm font-mono text-muted-foreground">
-                          Order ID: {order.id}
+                          Order ID: {order.id.slice(0, 8)}...
                         </p>
+                        {order.profile && (
+                          <p className="text-sm text-blue-600 flex items-center gap-1 mt-1">
+                            <User className="h-3 w-3" />
+                            {order.profile.full_name || order.profile.email}
+                          </p>
+                        )}
                       </div>
                       <StatusBadge status={order.status} />
                     </div>
-                    <div className="flex items-center space-x-4 text-sm text-muted-foreground">
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                       <span>
-                        Submitted: {new Date(order.updatedAt).toLocaleString()}
+                        {new Date(order.updatedAt).toLocaleString()}
                       </span>
                       <span>•</span>
                       <span className="font-semibold text-primary">
@@ -347,13 +401,24 @@ export function OrderVerificationPanel() {
                     })()}
                   </div>
                 </div>
-                <Button
-                  onClick={() => setSelectedOrder(order)}
-                  className="brutalist-button bg-primary text-primary-foreground hover:bg-primary/90 ml-4"
-                >
-                  <Eye className="h-4 w-4 mr-2" />
-                  Review
-                </Button>
+                {order.status === 'SUBMITTED' ? (
+                  <Button
+                    onClick={() => setSelectedOrder(order)}
+                    className="brutalist-button bg-primary text-primary-foreground hover:bg-primary/90 ml-4"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Review
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => setSelectedOrder(order)}
+                    variant="outline"
+                    className="border-2 border-black ml-4"
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    View
+                  </Button>
+                )}
               </div>
             </div>
           ))}
@@ -391,12 +456,18 @@ export function OrderVerificationPanel() {
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Order ID:</span>
-                      <span className="font-mono">{selectedOrder.id}</span>
+                      <span className="font-mono">{selectedOrder.id.slice(0, 8)}...</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Product:</span>
-                      <span className="font-semibold">{selectedOrder.product?.name}</span>
+                      <span className="font-semibold">{selectedOrder.product?.name || 'Unknown Product'}</span>
                     </div>
+                    {selectedOrder.profile && (
+                      <div className="flex justify-between">
+                        <span className="text-muted-foreground">Customer:</span>
+                        <span className="font-semibold text-blue-600">{selectedOrder.profile.full_name || selectedOrder.profile.email}</span>
+                      </div>
+                    )}
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Amount:</span>
                       <span className="font-bold text-primary">₹{selectedOrder.product?.salePrice}</span>
@@ -447,71 +518,150 @@ export function OrderVerificationPanel() {
 
               {/* Right: Actions */}
               <div className="space-y-6">
-                {/* Approve Section */}
-                <div className="brutalist-card p-6 border-green-500">
-                  <h3 className="font-bold font-['Space_Grotesk'] mb-4 text-green-600 flex items-center gap-2">
-                    {deliveryTypeLabels[getDeliveryType(selectedOrder)].icon}
-                    Approve Order - {deliveryTypeLabels[getDeliveryType(selectedOrder)].label}
-                  </h3>
-                  <div className="space-y-4">
-                    {renderCredentialsForm(getDeliveryType(selectedOrder))}
-                    <div>
-                      <Label htmlFor="expiry">Expiry Date</Label>
-                      <Input
-                        id="expiry"
-                        type="date"
-                        value={credentials.expiryDate}
-                        onChange={(e) => setCredentials({ ...credentials, expiryDate: e.target.value })}
-                        className="border-2 border-black"
-                      />
+                {selectedOrder.status === 'SUBMITTED' ? (
+                  <>
+                    {/* Approve Section */}
+                    <div className="brutalist-card p-6 border-green-500">
+                      <h3 className="font-bold font-['Space_Grotesk'] mb-4 text-green-600 flex items-center gap-2">
+                        {deliveryTypeLabels[getDeliveryType(selectedOrder)].icon}
+                        Approve Order - {deliveryTypeLabels[getDeliveryType(selectedOrder)].label}
+                      </h3>
+                      <div className="space-y-4">
+                        {renderCredentialsForm(getDeliveryType(selectedOrder))}
+                        <div>
+                          <Label htmlFor="expiry">Expiry Date</Label>
+                          <Input
+                            id="expiry"
+                            type="date"
+                            value={credentials.expiryDate}
+                            onChange={(e) => setCredentials({ ...credentials, expiryDate: e.target.value })}
+                            className="border-2 border-black"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor="additionalInfo">Additional Info (Optional)</Label>
+                          <Textarea
+                            id="additionalInfo"
+                            placeholder="Any extra instructions for the user..."
+                            value={credentials.additionalInfo}
+                            onChange={(e) => setCredentials({ ...credentials, additionalInfo: e.target.value })}
+                            className="border-2 border-black"
+                            rows={2}
+                          />
+                        </div>
+                        <Button
+                          onClick={handleApprove}
+                          className="w-full brutalist-button bg-green-600 text-white hover:bg-green-700"
+                        >
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Approve & Send to User
+                        </Button>
+                      </div>
                     </div>
-                    <div>
-                      <Label htmlFor="additionalInfo">Additional Info (Optional)</Label>
-                      <Textarea
-                        id="additionalInfo"
-                        placeholder="Any extra instructions for the user..."
-                        value={credentials.additionalInfo}
-                        onChange={(e) => setCredentials({ ...credentials, additionalInfo: e.target.value })}
-                        className="border-2 border-black"
-                        rows={2}
-                      />
-                    </div>
-                    <Button
-                      onClick={handleApprove}
-                      className="w-full brutalist-button bg-green-600 text-white hover:bg-green-700"
-                    >
-                      <CheckCircle2 className="h-4 w-4 mr-2" />
-                      Approve & Send to User
-                    </Button>
-                  </div>
-                </div>
 
-                {/* Reject Section */}
-                <div className="brutalist-card p-6 border-red-500">
-                  <h3 className="font-bold font-['Space_Grotesk'] mb-4 text-red-600">
-                    Reject Order
-                  </h3>
-                  <div className="space-y-4">
-                    <div>
-                      <Label htmlFor="reason">Rejection Reason</Label>
-                      <Textarea
-                        id="reason"
-                        placeholder="e.g., Invalid payment screenshot, amount mismatch..."
-                        value={rejectionReason}
-                        onChange={(e) => setRejectionReason(e.target.value)}
-                        className="border-2 border-black min-h-[100px]"
-                      />
+                    {/* Reject Section */}
+                    <div className="brutalist-card p-6 border-red-500">
+                      <h3 className="font-bold font-['Space_Grotesk'] mb-4 text-red-600">
+                        Reject Order
+                      </h3>
+                      <div className="space-y-4">
+                        <div>
+                          <Label htmlFor="reason">Rejection Reason</Label>
+                          <Textarea
+                            id="reason"
+                            placeholder="e.g., Invalid payment screenshot, amount mismatch..."
+                            value={rejectionReason}
+                            onChange={(e) => setRejectionReason(e.target.value)}
+                            className="border-2 border-black min-h-[100px]"
+                          />
+                        </div>
+                        <Button
+                          onClick={handleReject}
+                          variant="destructive"
+                          className="w-full brutalist-button"
+                        >
+                          <XCircle className="h-4 w-4 mr-2" />
+                          Reject Order
+                        </Button>
+                      </div>
                     </div>
-                    <Button
-                      onClick={handleReject}
-                      variant="destructive"
-                      className="w-full brutalist-button"
-                    >
-                      <XCircle className="h-4 w-4 mr-2" />
-                      Reject Order
-                    </Button>
+                  </>
+                ) : selectedOrder.status === 'COMPLETED' && selectedOrder.credentials ? (
+                  <div className="brutalist-card p-6 border-green-500">
+                    <h3 className="font-bold font-['Space_Grotesk'] mb-4 text-green-600 flex items-center gap-2">
+                      <CheckCircle2 className="h-5 w-5" />
+                      Delivered Credentials
+                    </h3>
+                    <div className="space-y-3 text-sm">
+                      {selectedOrder.credentials.username && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Username:</span>
+                          <span className="font-mono font-semibold">{selectedOrder.credentials.username}</span>
+                        </div>
+                      )}
+                      {selectedOrder.credentials.password && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Password:</span>
+                          <span className="font-mono font-semibold">{selectedOrder.credentials.password}</span>
+                        </div>
+                      )}
+                      {selectedOrder.credentials.couponCode && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Coupon Code:</span>
+                          <span className="font-mono font-semibold">{selectedOrder.credentials.couponCode}</span>
+                        </div>
+                      )}
+                      {selectedOrder.credentials.licenseKey && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">License Key:</span>
+                          <span className="font-mono font-semibold">{selectedOrder.credentials.licenseKey}</span>
+                        </div>
+                      )}
+                      {selectedOrder.credentials.activationLink && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Activation Link:</span>
+                          <a href={selectedOrder.credentials.activationLink} target="_blank" rel="noopener noreferrer" className="font-semibold text-blue-600 hover:underline truncate max-w-[200px]">
+                            {selectedOrder.credentials.activationLink}
+                          </a>
+                        </div>
+                      )}
+                      {selectedOrder.credentials.activationStatus && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Activation Status:</span>
+                          <span className="font-semibold text-green-600">{selectedOrder.credentials.activationStatus}</span>
+                        </div>
+                      )}
+                      {selectedOrder.credentials.expiryDate && (
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Expiry Date:</span>
+                          <span className="font-semibold">{new Date(selectedOrder.credentials.expiryDate).toLocaleDateString()}</span>
+                        </div>
+                      )}
+                      {selectedOrder.credentials.additionalInfo && (
+                        <div className="pt-2 border-t">
+                          <span className="text-muted-foreground">Additional Info:</span>
+                          <p className="mt-1">{selectedOrder.credentials.additionalInfo}</p>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                ) : selectedOrder.status === 'CANCELLED' && selectedOrder.cancellationReason ? (
+                  <div className="brutalist-card p-6 border-red-500">
+                    <h3 className="font-bold font-['Space_Grotesk'] mb-4 text-red-600 flex items-center gap-2">
+                      <XCircle className="h-5 w-5" />
+                      Cancellation Reason
+                    </h3>
+                    <p className="text-sm">{selectedOrder.cancellationReason}</p>
+                  </div>
+                ) : (
+                  <div className="brutalist-card p-6 border-amber-500">
+                    <h3 className="font-bold font-['Space_Grotesk'] mb-4 text-amber-600 flex items-center gap-2">
+                      <Clock className="h-5 w-5" />
+                      Awaiting Payment
+                    </h3>
+                    <p className="text-sm text-muted-foreground">User has not yet uploaded payment screenshot.</p>
+                  </div>
+                )}
               </div>
             </div>
           )}
