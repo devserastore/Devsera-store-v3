@@ -13,9 +13,9 @@ export function BottomNav() {
     { icon: <Gift className="h-5 w-5" />, label: 'Rewards', path: '/rewards' },
     { icon: <MessageSquare className="h-5 w-5" />, label: 'Support', path: '/support' },
     { 
-      icon: user ? <ShoppingBag className="h-5 w-5" /> : <User className="h-5 w-5" />, 
-      label: user ? 'Orders' : 'Login', 
-      path: user ? '/orders' : '/login' 
+      icon: user ? <User className="h-5 w-5" /> : <User className="h-5 w-5" />, 
+      label: user ? 'Profile' : 'Login', 
+      path: user ? '/profile' : '/login' 
     },
   ];
 

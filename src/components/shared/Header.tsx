@@ -42,16 +42,6 @@ export function Header() {
 
   const NavLinks = ({ mobile = false }: { mobile?: boolean }) => (
     <>
-      {user && (
-        <Link 
-          to="/profile" 
-          onClick={() => setIsOpen(false)}
-          className={`font-semibold transition-colors text-gray-700 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 flex items-center gap-1 ${mobile ? 'text-base py-2' : 'text-sm'}`}
-        >
-          <User className="h-4 w-4" />
-          Profile
-        </Link>
-      )}
       <Link 
         to="/" 
         onClick={() => setIsOpen(false)}
@@ -75,6 +65,14 @@ export function Header() {
         Community
       </Link>
       <Link 
+        to="/rewards" 
+        onClick={() => setIsOpen(false)}
+        className={`font-semibold transition-colors text-gray-700 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 flex items-center gap-1 ${mobile ? 'text-base py-2' : 'text-sm'}`}
+      >
+        <Gift className="h-4 w-4" />
+        Rewards
+      </Link>
+      <Link 
         to="/contact" 
         onClick={() => setIsOpen(false)}
         className={`font-semibold transition-colors text-gray-700 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 flex items-center gap-1 ${mobile ? 'text-base py-2' : 'text-sm'}`}
@@ -89,14 +87,6 @@ export function Header() {
       >
         <Ticket className="h-4 w-4" />
         Support
-      </Link>
-      <Link 
-        to="/rewards" 
-        onClick={() => setIsOpen(false)}
-        className={`font-semibold transition-colors text-gray-700 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 flex items-center gap-1 ${mobile ? 'text-base py-2' : 'text-sm'}`}
-      >
-        <Gift className="h-4 w-4" />
-        Rewards
       </Link>
       {user && (
         <Link 
@@ -245,12 +235,7 @@ export function Header() {
                 <div className="flex flex-col h-full">
                   {/* Mobile Header */}
                   <div className="flex items-center justify-between p-4 border-b border-gray-100">
-                    <span className="text-lg font-bold text-gray-900">Menu</span>
-                    <SheetClose asChild>
-                      <Button variant="ghost" size="icon" className="rounded-xl hover:bg-gray-100">
-                        <X className="h-5 w-5" />
-                      </Button>
-                    </SheetClose>
+                    <span className="text-lg font-bold text-gray-900 dark:text-white">Menu</span>
                   </div>
 
                   {/* User Profile Section (Mobile) */}
