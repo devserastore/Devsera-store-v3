@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '@/lib/supabase';
-import { Product, DeliveryType } from '@/types';
+import { Product, DeliveryType, ProductVariant } from '@/types';
 import { mockProducts } from '@/data/mockData';
 
 export function useProducts() {
@@ -28,24 +28,55 @@ export function useProducts() {
 
       if (error) throw error;
 
-      setProducts(
-        data.map((p) => ({
-          id: p.id,
-          name: p.name,
-          description: p.description,
-          image: p.image,
-          originalPrice: p.original_price,
-          salePrice: p.sale_price,
-          duration: p.duration,
-          features: p.features,
-          category: p.category,
-          deliveryType: (p.delivery_type as DeliveryType) || 'CREDENTIALS',
-          deliveryInstructions: p.delivery_instructions,
-          requiresUserInput: p.requires_user_input,
-          userInputLabel: p.user_input_label,
-          isActive: p.is_active ?? true,
-        }))
-      );
+      const mappedProducts = data.map((p) => ({
+        id: p.id,
+        name: p.name,
+        description: p.description,
+        image: p.image,
+        originalPrice: p.original_price,
+        salePrice: p.sale_price,
+        duration: p.duration,
+        features: p.features,
+        category: p.category,
+        deliveryType: (p.delivery_type as DeliveryType) || 'CREDENTIALS',
+        deliveryInstructions: p.delivery_instructions,
+        requiresUserInput: p.requires_user_input,
+        userInputLabel: p.user_input_label,
+        isActive: p.is_active ?? true,
+        hasVariants: p.has_variants || false,
+        scheduledStart: p.scheduled_start,
+        scheduledEnd: p.scheduled_end,
+        lowStockAlert: p.low_stock_alert,
+      }));
+
+      // Load variants for products with hasVariants
+      for (const product of mappedProducts) {
+        if (product.hasVariants) {
+          const { data: variantsData } = await supabase
+            .from('product_variants')
+            .select('*')
+            .eq('product_id', product.id)
+            .order('sort_order', { ascending: true });
+          
+          if (variantsData) {
+            product.variants = variantsData.map(v => ({
+              id: v.id,
+              productId: v.product_id,
+              name: v.name,
+              duration: v.duration,
+              originalPrice: v.original_price,
+              salePrice: v.sale_price,
+              stockCount: v.stock_count || 0,
+              isDefault: v.is_default,
+              sortOrder: v.sort_order,
+              createdAt: v.created_at,
+              updatedAt: v.updated_at
+            }));
+          }
+        }
+      }
+
+      setProducts(mappedProducts);
     } catch (err) {
       setError(err as Error);
       // Fallback to mock data on error
@@ -85,7 +116,7 @@ export function useProduct(id: string) {
       if (error) throw error;
 
       if (data) {
-        setProduct({
+        const mappedProduct: Product = {
           id: data.id,
           name: data.name,
           description: data.description,
@@ -100,7 +131,38 @@ export function useProduct(id: string) {
           requiresUserInput: data.requires_user_input,
           userInputLabel: data.user_input_label,
           isActive: data.is_active ?? true,
-        });
+          hasVariants: data.has_variants || false,
+          scheduledStart: data.scheduled_start,
+          scheduledEnd: data.scheduled_end,
+          lowStockAlert: data.low_stock_alert,
+        };
+
+        // Load variants if product has variants
+        if (mappedProduct.hasVariants) {
+          const { data: variantsData } = await supabase
+            .from('product_variants')
+            .select('*')
+            .eq('product_id', id)
+            .order('sort_order', { ascending: true });
+          
+          if (variantsData) {
+            mappedProduct.variants = variantsData.map(v => ({
+              id: v.id,
+              productId: v.product_id,
+              name: v.name,
+              duration: v.duration,
+              originalPrice: v.original_price,
+              salePrice: v.sale_price,
+              stockCount: v.stock_count || 0,
+              isDefault: v.is_default,
+              sortOrder: v.sort_order,
+              createdAt: v.created_at,
+              updatedAt: v.updated_at
+            }));
+          }
+        }
+
+        setProduct(mappedProduct);
       }
     } catch (err) {
       setError(err as Error);

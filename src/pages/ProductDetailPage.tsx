@@ -8,10 +8,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
-import { Check, Star, ShieldCheck, Clock, ArrowLeft, Key, Package, UserCheck, Zap, MessageCircle, Sparkles, Send } from 'lucide-react';
+import { Check, Star, ShieldCheck, Clock, ArrowLeft, Key, Package, UserCheck, Zap, MessageCircle, Sparkles, Send, Layers } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { DeliveryType } from '@/types';
+import { DeliveryType, ProductVariant } from '@/types';
 import { Badge } from '@/components/ui/badge';
 
 const deliveryTypeInfo: Record<DeliveryType, { label: string; icon: React.ReactNode; description: string; color: string }> = {
@@ -53,6 +53,7 @@ export function ProductDetailPage() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewComment, setReviewComment] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
 
   // Use mock data if Supabase is not configured
   const product = isSupabaseConfigured && dbProduct ? dbProduct : mockProducts.find(p => p.id === id);
@@ -128,14 +129,23 @@ export function ProductDetailPage() {
 
   const handleBuyNow = () => {
     if (!user) {
-      navigate('/login', { state: { from: `/checkout/${id}` } });
+      const variantParam = selectedVariant ? `?variant=${selectedVariant.id}` : '';
+      navigate('/login', { state: { from: `/checkout/${id}${variantParam}` } });
     } else {
-      navigate(`/checkout/${id}`);
+      const variantParam = selectedVariant ? `?variant=${selectedVariant.id}` : '';
+      navigate(`/checkout/${id}${variantParam}`);
     }
   };
-
-  const salePrice = product.salePrice || 0;
-  const originalPrice = product.originalPrice || 0;
+  
+  // Get selected variant or default
+  const selectedVariant = product?.hasVariants && product?.variants 
+    ? product.variants.find(v => v.id === selectedVariantId) || product.variants.find(v => v.isDefault) || product.variants[0]
+    : null;
+  
+  // Calculate effective prices based on variant
+  const salePrice = selectedVariant ? selectedVariant.salePrice : (product?.salePrice || 0);
+  const originalPrice = selectedVariant ? selectedVariant.originalPrice : (product?.originalPrice || 0);
+  const effectiveDuration = selectedVariant ? selectedVariant.duration : product?.duration;
   const savings = originalPrice - salePrice;
   const discountPercent = originalPrice > 0 ? Math.round((savings / originalPrice) * 100) : 0;
 
@@ -222,9 +232,56 @@ export function ProductDetailPage() {
               )}
               <div className="flex items-center gap-2 mt-4 text-gray-600 dark:text-gray-400">
                 <Clock className="h-4 w-4" />
-                <span className="font-semibold">{product.duration} Access</span>
+                <span className="font-semibold">{effectiveDuration} Access</span>
               </div>
             </div>
+
+            {/* Variant Selection */}
+            {product.hasVariants && product.variants && product.variants.length > 1 && (
+              <div className="space-y-3">
+                <label className="font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <Layers className="h-5 w-5 text-purple-600" />
+                  Select Plan
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  {product.variants.map((variant) => (
+                    <button
+                      key={variant.id}
+                      onClick={() => setSelectedVariantId(variant.id)}
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${
+                        (selectedVariant?.id === variant.id)
+                          ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20 shadow-lg'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="font-semibold text-gray-900 dark:text-white">
+                            {variant.name || variant.duration}
+                          </p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{variant.duration}</p>
+                        </div>
+                        <div className="text-right">
+                          {variant.originalPrice > variant.salePrice && (
+                            <p className="text-sm text-gray-400 line-through">
+                              ₹{variant.originalPrice.toLocaleString()}
+                            </p>
+                          )}
+                          <p className={`text-lg font-bold ${selectedVariant?.id === variant.id ? 'text-teal-600 dark:text-teal-400' : 'text-gray-900 dark:text-white'}`}>
+                            ₹{variant.salePrice.toLocaleString()}
+                          </p>
+                        </div>
+                      </div>
+                      {variant.isDefault && (
+                        <Badge className="mt-2 bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-0">
+                          Most Popular
+                        </Badge>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Buy Button */}
             <Button

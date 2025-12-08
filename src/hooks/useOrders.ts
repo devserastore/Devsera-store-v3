@@ -72,7 +72,7 @@ export function useOrders() {
     }
   };
 
-  const createOrder = async (productId: string, userProvidedInput?: string, totalAmount?: number) => {
+  const createOrder = async (productId: string, variantId?: string, totalAmount?: number) => {
     if (!user) throw new Error('User not authenticated');
 
     // First get the product to get the price
@@ -84,15 +84,26 @@ export function useOrders() {
 
     if (productError) throw productError;
 
-    const amount = totalAmount || productData?.sale_price || 0;
+    // If variant is provided, get variant price
+    let amount = totalAmount || productData?.sale_price || 0;
+    if (variantId && !totalAmount) {
+      const { data: variantData } = await supabase
+        .from('product_variants')
+        .select('sale_price')
+        .eq('id', variantId)
+        .single();
+      if (variantData) {
+        amount = variantData.sale_price;
+      }
+    }
 
     const { data, error } = await supabase
       .from('orders')
       .insert({
         user_id: user.id,
         product_id: productId,
+        variant_id: variantId || null,
         status: 'PENDING',
-        user_provided_input: userProvidedInput || null,
         total_amount: amount,
       })
       .select()
