@@ -4,10 +4,9 @@ import { useProducts } from '@/hooks/useProducts';
 import { useAdminTickets } from '@/hooks/useTickets';
 import { useAdminBundles } from '@/hooks/useBundles';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { DollarSign, ShoppingBag, Clock, CheckCircle2, XCircle, Users, MessageSquare, Package, Ticket, TrendingUp, Activity, BarChart3, ArrowUpRight, ArrowDownRight, Gift } from 'lucide-react';
+import { DollarSign, ShoppingBag, Clock, CheckCircle2, XCircle, Users, MessageSquare, Package, Ticket, TrendingUp, Activity, BarChart3, ArrowUpRight, ArrowDownRight, Gift, Flame } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { OrderVerificationPanel } from '@/components/admin/OrderVerificationPanel';
-import { AccountPoolManager } from '@/components/admin/AccountPoolManager';
 import { SettingsPanel } from '@/components/admin/SettingsPanel';
 import { ProductManager } from '@/components/admin/ProductManager';
 import { CustomerManager } from '@/components/admin/CustomerManager';
@@ -15,6 +14,7 @@ import { CommunityManager } from '@/components/admin/CommunityManager';
 import { BundleManager } from '@/components/admin/BundleManager';
 import { TicketManager } from '@/components/admin/TicketManager';
 import { RewardsManager } from '@/components/admin/RewardsManager';
+import { FlashSalesManager } from '@/components/admin/FlashSalesManager';
 import { mockOrders, mockProducts } from '@/data/mockData';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
@@ -103,32 +103,32 @@ export function AdminDashboard() {
 
   if (isLoading && isSupabaseConfigured) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-white to-amber-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-white to-amber-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 pb-20 md:pb-0">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-lg font-medium text-gray-600">Loading dashboard...</p>
+          <p className="text-lg font-medium text-gray-600 dark:text-gray-400">Loading dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 pb-20 md:pb-0">
       <div className="container mx-auto px-4 py-6 md:py-8">
         {/* Header */}
         <div className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-1">
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-1">
               Admin Dashboard
             </h1>
-            <p className="text-gray-500">
+            <p className="text-gray-500 dark:text-gray-400">
               Welcome back! Here's what's happening with your store.
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <div className="bg-white rounded-xl border-2 border-gray-200 px-4 py-2">
-              <p className="text-xs text-gray-500">Today's Date</p>
-              <p className="font-semibold text-gray-900">{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
+            <div className="bg-white dark:bg-gray-800 rounded-xl border-2 border-gray-200 dark:border-gray-700 px-4 py-2">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Today's Date</p>
+              <p className="font-semibold text-gray-900 dark:text-white">{new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
             </div>
           </div>
         </div>
@@ -291,17 +291,18 @@ export function AdminDashboard() {
               Customers
             </TabsTrigger>
             <TabsTrigger
-              value="accounts"
-              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white font-semibold rounded-lg"
-            >
-              Account Pool
-            </TabsTrigger>
-            <TabsTrigger
               value="bundles"
               className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-teal-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white font-semibold rounded-lg"
             >
               <Package className="h-4 w-4 mr-1.5" />
               Bundles
+            </TabsTrigger>
+            <TabsTrigger
+              value="flashsales"
+              className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-red-500 data-[state=active]:to-orange-500 data-[state=active]:text-white font-semibold rounded-lg"
+            >
+              <Flame className="h-4 w-4 mr-1.5" />
+              Flash Sales
             </TabsTrigger>
             <TabsTrigger
               value="rewards"
@@ -341,12 +342,12 @@ export function AdminDashboard() {
             <CustomerManager />
           </TabsContent>
 
-          <TabsContent value="accounts">
-            <AccountPoolManager />
-          </TabsContent>
-
           <TabsContent value="bundles">
             <BundleManager />
+          </TabsContent>
+
+          <TabsContent value="flashsales">
+            <FlashSalesManager />
           </TabsContent>
 
           <TabsContent value="rewards">

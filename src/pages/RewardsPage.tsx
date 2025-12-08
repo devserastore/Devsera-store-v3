@@ -201,12 +201,12 @@ export function RewardsPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-purple-50 via-white to-pink-50 flex items-center justify-center">
-        <Card className="max-w-md w-full mx-4">
+      <div className="min-h-screen bg-gradient-to-b from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center pb-20 md:pb-0">
+        <Card className="max-w-md w-full mx-4 dark:bg-gray-800 dark:border-gray-700">
           <CardContent className="p-8 text-center">
             <Gift className="h-16 w-16 text-purple-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Login Required</h2>
-            <p className="text-gray-600 mb-6">Please login to access rewards and referrals</p>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Login Required</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">Please login to access rewards and referrals</p>
             <Button onClick={() => navigate('/login')} className="rounded-xl">
               Login to Continue
             </Button>
@@ -217,7 +217,7 @@ export function RewardsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 via-white to-pink-50">
+    <div className="min-h-screen bg-gradient-to-b from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 pb-20 md:pb-0">
       <div className="container mx-auto px-4 py-8 max-w-5xl">
         {/* Header */}
         <div className="text-center mb-8">
@@ -225,10 +225,10 @@ export function RewardsPage() {
             <Gift className="h-4 w-4" />
             Rewards & Referrals
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
             Earn Rewards, Share & Save
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-400">
             Earn points on every purchase and get exclusive discounts
           </p>
         </div>

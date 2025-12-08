@@ -124,28 +124,28 @@ export function RegisterPage() {
       </div>
 
       {/* Right Side - Form */}
-      <div className="flex-1 flex items-center justify-center px-4 py-12 bg-white">
+      <div className="flex-1 flex items-center justify-center px-4 py-12 bg-white dark:bg-gray-900">
         <div className="w-full max-w-md">
           {/* Logo */}
           <Link to="/" className="flex items-center gap-2 mb-8">
             <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-teal-500/25">
               <ShoppingBag className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold text-gray-900">Devsera Store</span>
+            <span className="text-xl font-bold text-gray-900 dark:text-white">Devsera Store</span>
           </Link>
 
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
               Create your account
             </h1>
-            <p className="text-gray-500">
+            <p className="text-gray-500 dark:text-gray-400">
               Join thousands of happy users getting premium services
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-gray-700 font-medium">Full Name</Label>
+              <Label htmlFor="name" className="text-gray-700 dark:text-gray-300 font-medium">Full Name</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
@@ -155,13 +155,13 @@ export function RegisterPage() {
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
-                  className="pl-10 h-12 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+                  className="pl-10 h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:bg-gray-800"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-gray-700 font-medium">Email</Label>
+              <Label htmlFor="email" className="text-gray-700 dark:text-gray-300 font-medium">Email</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input
@@ -171,13 +171,13 @@ export function RegisterPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className="pl-10 h-12 border-2 border-gray-200 rounded-xl focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+                  className="pl-10 h-12 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 dark:bg-gray-800"
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-gray-700 font-medium">Password</Label>
+              <Label htmlFor="password" className="text-gray-700 dark:text-gray-300 font-medium">Password</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
                 <Input

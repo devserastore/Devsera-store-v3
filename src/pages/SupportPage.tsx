@@ -128,12 +128,12 @@ export function SupportPage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-teal-50 via-white to-blue-50 flex items-center justify-center">
-        <Card className="max-w-md w-full mx-4">
+      <div className="min-h-screen bg-gradient-to-b from-teal-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center pb-20 md:pb-0">
+        <Card className="max-w-md w-full mx-4 dark:bg-gray-800 dark:border-gray-700">
           <CardContent className="p-8 text-center">
             <Headphones className="h-16 w-16 text-teal-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Login Required</h2>
-            <p className="text-gray-600 mb-6">Please login to access support and create tickets</p>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Login Required</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">Please login to access support and create tickets</p>
             <Button onClick={() => navigate('/login')} className="rounded-xl">
               Login to Continue
             </Button>
@@ -144,7 +144,7 @@ export function SupportPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-teal-50 via-white to-blue-50">
+    <div className="min-h-screen bg-gradient-to-b from-teal-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 pb-20 md:pb-0">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         {/* Header */}
         <div className="text-center mb-8">
@@ -152,16 +152,16 @@ export function SupportPage() {
             <Headphones className="h-4 w-4" />
             Support Center
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
             How Can We Help?
           </h1>
-          <p className="text-gray-600">
+          <p className="text-gray-600 dark:text-gray-400">
             Create a support ticket or contact us directly on Telegram
           </p>
         </div>
 
         {/* Quick Contact */}
-        <Card className="border-2 border-[#0088cc] bg-gradient-to-r from-[#0088cc]/5 to-[#0088cc]/10 mb-8">
+        <Card className="border-2 border-[#0088cc] bg-gradient-to-r from-[#0088cc]/5 to-[#0088cc]/10 dark:from-[#0088cc]/10 dark:to-[#0088cc]/20 mb-8">
           <CardContent className="p-6">
             <div className="flex flex-col md:flex-row items-center justify-between gap-4">
               <div className="flex items-center gap-4">
@@ -169,8 +169,8 @@ export function SupportPage() {
                   <MessageCircle className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900">Need Instant Help?</h3>
-                  <p className="text-sm text-gray-600">Chat with us on Telegram for faster response</p>
+                  <h3 className="font-bold text-gray-900 dark:text-white">Need Instant Help?</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Chat with us on Telegram for faster response</p>
                 </div>
               </div>
               <Button asChild className="bg-[#0088cc] hover:bg-[#0077b5] text-white rounded-xl">
@@ -197,7 +197,7 @@ export function SupportPage() {
 
         {/* Create Ticket Form */}
         {showForm && (
-          <Card className="border-2 border-gray-200 mb-8">
+          <Card className="border-2 border-gray-200 dark:border-gray-700 mb-8 dark:bg-gray-800">
             <CardHeader className="border-b bg-gray-50">
               <CardTitle className="flex items-center gap-2">
                 <Ticket className="h-5 w-5" />

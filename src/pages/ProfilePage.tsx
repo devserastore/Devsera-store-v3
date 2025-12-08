@@ -140,12 +140,12 @@ export function ProfilePage() {
 
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-teal-50 flex items-center justify-center px-4">
-        <Card className="max-w-md w-full">
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-teal-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center px-4 pb-20 md:pb-0">
+        <Card className="max-w-md w-full dark:bg-gray-800 dark:border-gray-700">
           <CardContent className="p-8 text-center">
             <User className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Login Required</h2>
-            <p className="text-gray-600 mb-6">Please login to view your profile</p>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Login Required</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">Please login to view your profile</p>
             <Button onClick={() => navigate('/login')} className="rounded-xl w-full">
               Login to Continue
             </Button>
@@ -156,7 +156,7 @@ export function ProfilePage() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-teal-50">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-teal-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 pb-20 md:pb-0">
       <div className="container mx-auto px-4 py-6 md:py-8 max-w-4xl">
         {/* Profile Header */}
         <Card className="mb-6 border-2 border-gray-200 overflow-hidden">

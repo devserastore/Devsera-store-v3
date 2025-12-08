@@ -59,17 +59,17 @@ export function ContactPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-teal-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-teal-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 pb-20 md:pb-0">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-teal-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-lg font-medium text-gray-600">Loading...</p>
+          <p className="text-lg font-medium text-gray-600 dark:text-gray-400">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 via-white to-teal-50">
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 via-white to-teal-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 pb-20 md:pb-0">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Header */}
         <div className="text-center mb-12">
@@ -77,10 +77,10 @@ export function ContactPage() {
             <Headphones className="h-4 w-4" />
             We're Here to Help
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
             Contact <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-600 to-blue-600">Us</span>
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
             Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
           </p>
         </div>
@@ -89,15 +89,15 @@ export function ContactPage() {
           {/* Contact Info Cards */}
           <div className="lg:col-span-1 space-y-4">
             {/* Telegram - Primary */}
-            <Card className="border-2 border-[#0088cc] bg-gradient-to-br from-[#0088cc]/5 to-[#0088cc]/10 hover:shadow-lg transition-all">
+            <Card className="border-2 border-[#0088cc] bg-gradient-to-br from-[#0088cc]/5 to-[#0088cc]/10 dark:from-[#0088cc]/10 dark:to-[#0088cc]/20 hover:shadow-lg transition-all">
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
                   <div className="w-12 h-12 bg-[#0088cc] rounded-xl flex items-center justify-center flex-shrink-0">
                     <MessageCircle className="h-6 w-6 text-white" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-bold text-gray-900 mb-1">Telegram (Fastest)</h3>
-                    <p className="text-sm text-gray-600 mb-3">Get instant support on Telegram</p>
+                    <h3 className="font-bold text-gray-900 dark:text-white mb-1">Telegram (Fastest)</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Get instant support on Telegram</p>
                     <a
                       href={telegramLink}
                       target="_blank"
@@ -123,18 +123,18 @@ export function ContactPage() {
 
             {/* Email */}
             {settings?.contactEmail && (
-              <Card className="border-2 border-gray-200 hover:border-teal-300 hover:shadow-lg transition-all">
+              <Card className="border-2 border-gray-200 dark:border-gray-700 hover:border-teal-300 dark:hover:border-teal-600 hover:shadow-lg transition-all dark:bg-gray-800">
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-teal-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Mail className="h-6 w-6 text-teal-600" />
+                    <div className="w-12 h-12 bg-teal-100 dark:bg-teal-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Mail className="h-6 w-6 text-teal-600 dark:text-teal-400" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-gray-900 mb-1">Email</h3>
-                      <p className="text-sm text-gray-600 mb-2">Send us an email anytime</p>
+                      <h3 className="font-bold text-gray-900 dark:text-white mb-1">Email</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Send us an email anytime</p>
                       <a
                         href={`mailto:${settings.contactEmail}`}
-                        className="text-teal-600 font-semibold hover:underline"
+                        className="text-teal-600 dark:text-teal-400 font-semibold hover:underline"
                       >
                         {settings.contactEmail}
                       </a>
@@ -146,18 +146,18 @@ export function ContactPage() {
 
             {/* Phone */}
             {settings?.contactPhone && (
-              <Card className="border-2 border-gray-200 hover:border-teal-300 hover:shadow-lg transition-all">
+              <Card className="border-2 border-gray-200 dark:border-gray-700 hover:border-teal-300 dark:hover:border-teal-600 hover:shadow-lg transition-all dark:bg-gray-800">
                 <CardContent className="p-6">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                      <Phone className="h-6 w-6 text-green-600" />
+                    <div className="w-12 h-12 bg-green-100 dark:bg-green-900/30 rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Phone className="h-6 w-6 text-green-600 dark:text-green-400" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-gray-900 mb-1">Phone</h3>
-                      <p className="text-sm text-gray-600 mb-2">Call us during business hours</p>
+                      <h3 className="font-bold text-gray-900 dark:text-white mb-1">Phone</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Call us during business hours</p>
                       <a
                         href={`tel:${settings.contactPhone}`}
-                        className="text-green-600 font-semibold hover:underline"
+                        className="text-green-600 dark:text-green-400 font-semibold hover:underline"
                       >
                         {settings.contactPhone}
                       </a>
