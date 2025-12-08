@@ -40,6 +40,16 @@ export function Header() {
 
   const NavLinks = ({ mobile = false }: { mobile?: boolean }) => (
     <>
+      {user && (
+        <Link 
+          to="/profile" 
+          onClick={() => setIsOpen(false)}
+          className={`font-semibold transition-colors hover:text-primary flex items-center gap-1 ${mobile ? 'text-base py-2' : 'text-sm'}`}
+        >
+          <User className="h-4 w-4" />
+          Profile
+        </Link>
+      )}
       <Link 
         to="/" 
         onClick={() => setIsOpen(false)}

@@ -13,7 +13,7 @@ CREATE POLICY "Authenticated users can like posts" ON community_posts
 -- Fix support_tickets INSERT policy again
 DROP POLICY IF EXISTS "Users can create tickets" ON support_tickets;
 CREATE POLICY "Users can create tickets" ON support_tickets
-  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL AND auth.uid() = user_id);
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 
 -- Ensure users can view their own tickets
 DROP POLICY IF EXISTS "Users can view own tickets" ON support_tickets;
