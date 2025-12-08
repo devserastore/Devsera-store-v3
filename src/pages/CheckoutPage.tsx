@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProduct } from '@/hooks/useProducts';
 import { useOrders } from '@/hooks/useOrders';
@@ -29,6 +29,7 @@ export function CheckoutPage() {
   const [isUploading, setIsUploading] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [userInput, setUserInput] = useState('');
+  const [userPassword, setUserPassword] = useState('');
 
   const { product: dbProduct, isLoading: productLoading } = useProduct(id!);
   const { settings: dbSettings, isLoading: settingsLoading } = useSettings();
@@ -43,11 +44,15 @@ export function CheckoutPage() {
     console.log('Settings loaded:', { dbSettings, settings, isSupabaseConfigured });
   }, [dbSettings, settings]);
 
+  const orderCreatedRef = useRef(false);
+  
   useEffect(() => {
-    if (product && !orderId && isSupabaseConfigured) {
+    if (product && !orderId && isSupabaseConfigured && !orderCreatedRef.current) {
+      orderCreatedRef.current = true;
       createOrder(product.id, undefined, product.salePrice).then((order) => {
         setOrderId(order.id);
       }).catch((error) => {
+        orderCreatedRef.current = false;
         toast({
           title: 'Error creating order',
           description: error.message,
@@ -55,7 +60,7 @@ export function CheckoutPage() {
         });
       });
     }
-  }, [product]);
+  }, [product, orderId, createOrder]);
 
   if ((productLoading || settingsLoading) && isSupabaseConfigured) {
     return (
@@ -115,7 +120,17 @@ export function CheckoutPage() {
     if (product?.requiresUserInput && !userInput.trim()) {
       toast({
         title: 'Account details required',
-        description: `Please provide your ${product.userInputLabel || 'account details'}`,
+        description: `Please provide your ${product.userInputLabel || 'account email'}`,
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate password for manual activation products
+    if (product?.requiresUserInput && !userPassword.trim()) {
+      toast({
+        title: 'Password required',
+        description: 'Please provide your account password for activation',
         variant: 'destructive',
       });
       return;
@@ -130,8 +145,13 @@ export function CheckoutPage() {
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
+      // Combine email and password for storage
+      const userProvidedData = product?.requiresUserInput 
+        ? JSON.stringify({ email: userInput, password: userPassword })
+        : userInput;
+
       if (isSupabaseConfigured && orderId) {
-        await uploadPaymentScreenshot(orderId, screenshot, userInput);
+        await uploadPaymentScreenshot(orderId, screenshot, userProvidedData);
       }
       setUploadProgress(100);
 
@@ -317,24 +337,42 @@ export function CheckoutPage() {
                 <div className="flex items-center gap-2 mb-3">
                   <Info className="h-5 w-5 text-blue-600" />
                   <h3 className="font-bold text-blue-800">
-                    Your Account Details Required
+                    Your Account Credentials Required
                   </h3>
                 </div>
                 <p className="text-sm text-blue-700 mb-4">
-                  We need your account details to activate the service on your existing account.
+                  We need your account credentials to activate the service on your existing account. Your credentials are securely stored and only used for activation.
                 </p>
-                <div>
-                  <Label htmlFor="userInput" className="font-semibold text-blue-800">
-                    {product.userInputLabel || 'Your Account Email/ID'} *
-                  </Label>
-                  <Input
-                    id="userInput"
-                    type="text"
-                    placeholder={`Enter your ${product.userInputLabel?.toLowerCase() || 'account email'}`}
-                    value={userInput}
-                    onChange={(e) => setUserInput(e.target.value)}
-                    className="border-2 border-blue-200 rounded-xl mt-2 focus:border-blue-500"
-                  />
+                <div className="space-y-4">
+                  <div>
+                    <Label htmlFor="userInput" className="font-semibold text-blue-800">
+                      {product.userInputLabel || 'Your Account Email'} *
+                    </Label>
+                    <Input
+                      id="userInput"
+                      type="email"
+                      placeholder={`Enter your ${product.userInputLabel?.toLowerCase() || 'account email'}`}
+                      value={userInput}
+                      onChange={(e) => setUserInput(e.target.value)}
+                      className="border-2 border-blue-200 rounded-xl mt-2 focus:border-blue-500"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="userPassword" className="font-semibold text-blue-800">
+                      Account Password *
+                    </Label>
+                    <Input
+                      id="userPassword"
+                      type="password"
+                      placeholder="Enter your account password"
+                      value={userPassword}
+                      onChange={(e) => setUserPassword(e.target.value)}
+                      className="border-2 border-blue-200 rounded-xl mt-2 focus:border-blue-500"
+                    />
+                    <p className="text-xs text-blue-600 mt-1">
+                      🔒 Your password is encrypted and only used for activation purposes
+                    </p>
+                  </div>
                 </div>
               </div>
             )}
@@ -402,7 +440,16 @@ export function CheckoutPage() {
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
               <p className="text-sm text-center text-gray-600">
                 Need help?{' '}
-                {settings?.telegramLink ? (
+                {settings?.telegramUsername ? (
+                  <a
+                    href={`https://t.me/${settings.telegramUsername.replace('@', '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[#0088cc] font-bold hover:underline"
+                  >
+                    Contact {settings.telegramUsername} on Telegram
+                  </a>
+                ) : settings?.telegramLink ? (
                   <a
                     href={settings.telegramLink}
                     target="_blank"

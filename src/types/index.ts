@@ -39,6 +39,11 @@ export interface OrderCredentials {
   additionalInfo?: string;
 }
 
+export interface UserProvidedCredentials {
+  email?: string;
+  password?: string;
+}
+
 export interface Order {
   id: string;
   userId: string;
@@ -46,8 +51,10 @@ export interface Order {
   product?: Product;
   status: OrderStatus;
   paymentScreenshot?: string;
-  // User-provided input for MANUAL_ACTIVATION
+  // User-provided input for MANUAL_ACTIVATION (legacy - single string)
   userProvidedInput?: string;
+  // User-provided credentials for MANUAL_ACTIVATION (email + password)
+  userProvidedCredentials?: UserProvidedCredentials;
   // Flexible credentials based on delivery type
   credentials?: OrderCredentials;
   cancellationReason?: string;
@@ -99,6 +106,7 @@ export interface Settings {
   upiId: string;
   qrCodeUrl: string;
   telegramLink: string;
+  telegramUsername: string;
   contactEmail: string;
   contactPhone: string;
 }

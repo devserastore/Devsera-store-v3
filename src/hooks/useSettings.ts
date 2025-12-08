@@ -46,6 +46,7 @@ export function useSettings() {
           upiId: data.upi_id || '',
           qrCodeUrl: data.qr_code_url || '',
           telegramLink: data.telegram_link || '',
+          telegramUsername: data.telegram_username || '@karthik_nkn',
           contactEmail: data.contact_email || '',
           contactPhone: data.contact_phone || '',
         });
@@ -57,6 +58,7 @@ export function useSettings() {
             upi_id: 'yourname@upi',
             qr_code_url: '',
             telegram_link: '',
+            telegram_username: '@karthik_nkn',
             contact_email: '',
             contact_phone: '',
           })
@@ -71,6 +73,7 @@ export function useSettings() {
             upiId: newData.upi_id || '',
             qrCodeUrl: newData.qr_code_url || '',
             telegramLink: newData.telegram_link || '',
+            telegramUsername: newData.telegram_username || '@karthik_nkn',
             contactEmail: newData.contact_email || '',
             contactPhone: newData.contact_phone || '',
           });
@@ -110,6 +113,9 @@ export function useSettings() {
       if (newSettings.telegramLink !== undefined) {
         updateData.telegram_link = newSettings.telegramLink;
       }
+      if (newSettings.telegramUsername !== undefined) {
+        updateData.telegram_username = newSettings.telegramUsername;
+      }
       if (newSettings.contactEmail !== undefined) {
         updateData.contact_email = newSettings.contactEmail;
       }
@@ -141,6 +147,7 @@ export function useSettings() {
             upi_id: newSettings.upiId || '',
             qr_code_url: newSettings.qrCodeUrl || '',
             telegram_link: newSettings.telegramLink || '',
+            telegram_username: newSettings.telegramUsername || '@karthik_nkn',
             contact_email: newSettings.contactEmail || '',
             contact_phone: newSettings.contactPhone || '',
           })

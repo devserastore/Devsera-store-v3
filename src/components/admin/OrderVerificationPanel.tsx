@@ -316,14 +316,35 @@ export function OrderVerificationPanel() {
                         {deliveryTypeLabels[order.product?.deliveryType || 'CREDENTIALS'].label}
                       </span>
                     </div>
-                    {order.userProvidedInput && (
-                      <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
-                        <span className="flex items-center gap-1 text-blue-700">
-                          <User className="h-3 w-3" />
-                          User's Account: <span className="font-mono font-semibold">{order.userProvidedInput}</span>
-                        </span>
-                      </div>
-                    )}
+                    {order.userProvidedInput && (() => {
+                      try {
+                        const parsed = JSON.parse(order.userProvidedInput);
+                        if (parsed.email && parsed.password) {
+                          return (
+                            <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm space-y-1">
+                              <span className="flex items-center gap-1 text-blue-700">
+                                <User className="h-3 w-3" />
+                                Email: <span className="font-mono font-semibold">{parsed.email}</span>
+                              </span>
+                              <span className="flex items-center gap-1 text-blue-700">
+                                <Key className="h-3 w-3" />
+                                Password: <span className="font-mono font-semibold">{parsed.password}</span>
+                              </span>
+                            </div>
+                          );
+                        }
+                      } catch {
+                        // Not JSON, show as plain text
+                      }
+                      return (
+                        <div className="mt-2 p-2 bg-blue-50 border border-blue-200 rounded text-sm">
+                          <span className="flex items-center gap-1 text-blue-700">
+                            <User className="h-3 w-3" />
+                            User's Account: <span className="font-mono font-semibold">{order.userProvidedInput}</span>
+                          </span>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
                 <Button
@@ -387,14 +408,39 @@ export function OrderVerificationPanel() {
                         {deliveryTypeLabels[getDeliveryType(selectedOrder)].label}
                       </span>
                     </div>
-                    {selectedOrder.userProvidedInput && (
-                      <div className="pt-2 border-t">
-                        <span className="text-muted-foreground">User's Account:</span>
-                        <p className="font-mono font-semibold text-blue-600 mt-1">
-                          {selectedOrder.userProvidedInput}
-                        </p>
-                      </div>
-                    )}
+                    {selectedOrder.userProvidedInput && (() => {
+                      try {
+                        const parsed = JSON.parse(selectedOrder.userProvidedInput);
+                        if (parsed.email && parsed.password) {
+                          return (
+                            <div className="pt-2 border-t space-y-2">
+                              <div>
+                                <span className="text-muted-foreground">User's Email:</span>
+                                <p className="font-mono font-semibold text-blue-600 mt-1">
+                                  {parsed.email}
+                                </p>
+                              </div>
+                              <div>
+                                <span className="text-muted-foreground">User's Password:</span>
+                                <p className="font-mono font-semibold text-blue-600 mt-1">
+                                  {parsed.password}
+                                </p>
+                              </div>
+                            </div>
+                          );
+                        }
+                      } catch {
+                        // Not JSON, show as plain text
+                      }
+                      return (
+                        <div className="pt-2 border-t">
+                          <span className="text-muted-foreground">User's Account:</span>
+                          <p className="font-mono font-semibold text-blue-600 mt-1">
+                            {selectedOrder.userProvidedInput}
+                          </p>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
