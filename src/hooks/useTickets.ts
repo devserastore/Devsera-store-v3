@@ -103,7 +103,7 @@ export function useUserTickets() {
         description: ticket.description,
         category: ticket.category,
         priority: ticket.priority,
-        order_id: ticket.orderId || null,
+        order_id: ticket.orderId && ticket.orderId !== 'none' ? ticket.orderId : null,
       })
       .select()
       .single();
