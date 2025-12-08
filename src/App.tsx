@@ -13,6 +13,9 @@ import { CommunityPage } from '@/pages/CommunityPage';
 import { BundleOffersPage } from '@/pages/BundleOffersPage';
 import { ContactPage } from '@/pages/ContactPage';
 import { SupportPage } from '@/pages/SupportPage';
+import { RewardsPage } from '@/pages/RewardsPage';
+import { ProfilePage } from '@/pages/ProfilePage';
+import { LiveChatWidget } from '@/pages/LiveChatWidget';
 import { AdminDashboard } from '@/pages/admin/AdminDashboard';
 
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
@@ -52,6 +55,8 @@ function AppRoutes() {
         <Route path="/bundles" element={<BundleOffersPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/support" element={<SupportPage />} />
+        <Route path="/rewards" element={<RewardsPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route
           path="/checkout/:id"
           element={
@@ -77,6 +82,7 @@ function AppRoutes() {
           }
         />
       </Routes>
+      <LiveChatWidget />
       <Toaster />
     </>
   );

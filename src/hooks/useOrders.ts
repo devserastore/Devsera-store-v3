@@ -209,6 +209,13 @@ export function useAdminOrders() {
   };
 
   const approveOrder = async (orderId: string, credentials: OrderCredentials) => {
+    // Get order details first
+    const { data: orderData } = await supabase
+      .from('orders')
+      .select('user_id, product_id, products(sale_price)')
+      .eq('id', orderId)
+      .single();
+
     const { error } = await supabase
       .from('orders')
       .update({
@@ -218,6 +225,122 @@ export function useAdminOrders() {
       .eq('id', orderId);
 
     if (error) throw error;
+
+    // Award loyalty points (10 points per ₹100 spent)
+    if (orderData?.user_id && orderData?.products?.sale_price) {
+      const pointsEarned = Math.floor(parseFloat(orderData.products.sale_price) / 10);
+      
+      if (pointsEarned > 0) {
+        // Add point transaction
+        await supabase.from('point_transactions').insert({
+          user_id: orderData.user_id,
+          points: pointsEarned,
+          type: 'earned',
+          description: 'Points earned from order',
+          order_id: orderId,
+        });
+
+        // Update loyalty points
+        const { data: loyaltyData } = await supabase
+          .from('loyalty_points')
+          .select('total_points, lifetime_points, tier')
+          .eq('user_id', orderData.user_id)
+          .single();
+
+        if (loyaltyData) {
+          const newTotal = loyaltyData.total_points + pointsEarned;
+          const newLifetime = loyaltyData.lifetime_points + pointsEarned;
+          
+          let newTier = 'bronze';
+          if (newLifetime >= 5000) newTier = 'platinum';
+          else if (newLifetime >= 1500) newTier = 'gold';
+          else if (newLifetime >= 500) newTier = 'silver';
+
+          await supabase
+            .from('loyalty_points')
+            .update({
+              total_points: newTotal,
+              lifetime_points: newLifetime,
+              tier: newTier,
+            })
+            .eq('user_id', orderData.user_id);
+        } else {
+          // Create loyalty record if doesn't exist
+          await supabase.from('loyalty_points').insert({
+            user_id: orderData.user_id,
+            total_points: pointsEarned,
+            lifetime_points: pointsEarned,
+          });
+        }
+
+        // Complete referral if this is user's first order
+        const { data: referralData } = await supabase
+          .from('referrals')
+          .select('*')
+          .eq('referred_id', orderData.user_id)
+          .eq('status', 'pending')
+          .single();
+
+        if (referralData) {
+          // Update referral status
+          await supabase
+            .from('referrals')
+            .update({ status: 'completed', reward_given: true })
+            .eq('id', referralData.id);
+
+          // Award referrer
+          await supabase.from('point_transactions').insert({
+            user_id: referralData.referrer_id,
+            points: 100,
+            type: 'referral',
+            description: 'Referral bonus - friend made first purchase',
+          });
+
+          // Update referrer's points
+          const { data: referrerLoyalty } = await supabase
+            .from('loyalty_points')
+            .select('total_points, lifetime_points')
+            .eq('user_id', referralData.referrer_id)
+            .single();
+
+          if (referrerLoyalty) {
+            await supabase
+              .from('loyalty_points')
+              .update({
+                total_points: referrerLoyalty.total_points + 100,
+                lifetime_points: referrerLoyalty.lifetime_points + 100,
+              })
+              .eq('user_id', referralData.referrer_id);
+          }
+
+          // Award referred user bonus
+          await supabase.from('point_transactions').insert({
+            user_id: orderData.user_id,
+            points: 50,
+            type: 'bonus',
+            description: 'Welcome bonus from referral',
+          });
+
+          // Update referred user's points
+          const { data: referredLoyalty } = await supabase
+            .from('loyalty_points')
+            .select('total_points, lifetime_points')
+            .eq('user_id', orderData.user_id)
+            .single();
+
+          if (referredLoyalty) {
+            await supabase
+              .from('loyalty_points')
+              .update({
+                total_points: referredLoyalty.total_points + 50,
+                lifetime_points: referredLoyalty.lifetime_points + 50,
+              })
+              .eq('user_id', orderData.user_id);
+          }
+        }
+      }
+    }
+
     await loadOrders();
   };
 

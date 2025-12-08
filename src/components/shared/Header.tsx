@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { User, ShoppingBag, LayoutDashboard, LogOut, Menu, X, ChevronDown, Package, Phone, Ticket } from 'lucide-react';
+import { User, ShoppingBag, LayoutDashboard, LogOut, Menu, X, ChevronDown, Package, Phone, Ticket, Gift } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 
 export function Header() {
@@ -77,6 +77,14 @@ export function Header() {
       >
         <Ticket className="h-4 w-4" />
         Support
+      </Link>
+      <Link 
+        to="/rewards" 
+        onClick={() => setIsOpen(false)}
+        className={`font-semibold transition-colors hover:text-primary flex items-center gap-1 ${mobile ? 'text-base py-2' : 'text-sm'}`}
+      >
+        <Gift className="h-4 w-4" />
+        Rewards
       </Link>
       {user && (
         <Link 
@@ -148,6 +156,13 @@ export function Header() {
                       <p className="text-sm font-semibold text-gray-900">{user.name}</p>
                       <p className="text-xs text-gray-500">{user.email}</p>
                     </div>
+                    <DropdownMenuItem 
+                      onClick={() => navigate('/profile')}
+                      className="rounded-lg cursor-pointer"
+                    >
+                      <User className="h-4 w-4 mr-3 text-gray-500" />
+                      My Profile
+                    </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => navigate('/orders')}
                       className="rounded-lg cursor-pointer"

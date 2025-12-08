@@ -3,12 +3,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useProduct } from '@/hooks/useProducts';
 import { useOrders } from '@/hooks/useOrders';
 import { useSettings } from '@/hooks/useSettings';
+import { useCoupons } from '@/hooks/useCoupons';
 import { mockProducts, mockSettings } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { Copy, Upload, CheckCircle2, ArrowLeft, Info, Key, Package, UserCheck, Zap } from 'lucide-react';
+import { Copy, Upload, CheckCircle2, ArrowLeft, Info, Key, Package, UserCheck, Zap, Ticket, X } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { DeliveryType } from '@/types';
@@ -34,10 +35,16 @@ export function CheckoutPage() {
   const { product: dbProduct, isLoading: productLoading } = useProduct(id!);
   const { settings: dbSettings, isLoading: settingsLoading } = useSettings();
   const { createOrder, uploadPaymentScreenshot } = useOrders();
+  const { validateCoupon, useCoupon, availableCoupons } = useCoupons();
 
   // Use database data if available, otherwise fall back to mock data
   const product = dbProduct || (!isSupabaseConfigured ? mockProducts.find(p => p.id === id) : null);
   const settings = dbSettings || (!isSupabaseConfigured ? mockSettings : null);
+  
+  // Coupon state
+  const [couponCode, setCouponCode] = useState('');
+  const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; discountAmount: number } | null>(null);
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   
   // Debug log to check settings
   useEffect(() => {
@@ -45,22 +52,10 @@ export function CheckoutPage() {
   }, [dbSettings, settings]);
 
   const orderCreatedRef = useRef(false);
+  const [orderCreationAttempted, setOrderCreationAttempted] = useState(false);
   
-  useEffect(() => {
-    if (product && !orderId && isSupabaseConfigured && !orderCreatedRef.current) {
-      orderCreatedRef.current = true;
-      createOrder(product.id, undefined, product.salePrice).then((order) => {
-        setOrderId(order.id);
-      }).catch((error) => {
-        orderCreatedRef.current = false;
-        toast({
-          title: 'Error creating order',
-          description: error.message,
-          variant: 'destructive',
-        });
-      });
-    }
-  }, [product, orderId, createOrder]);
+  // Create order only once when user clicks "Place Order" button, not on page load
+  // This prevents duplicate orders when user is just viewing the checkout page
 
   if ((productLoading || settingsLoading) && isSupabaseConfigured) {
     return (
@@ -139,6 +134,23 @@ export function CheckoutPage() {
     setIsUploading(true);
     
     try {
+      // Create order first if not already created
+      let currentOrderId = orderId;
+      const finalPrice = appliedCoupon 
+        ? Math.max(0, (product?.salePrice || 0) - appliedCoupon.discountAmount)
+        : product?.salePrice;
+        
+      if (!currentOrderId && product && isSupabaseConfigured) {
+        const order = await createOrder(product.id, undefined, finalPrice);
+        currentOrderId = order.id;
+        setOrderId(order.id);
+        
+        // Mark coupon as used if applied
+        if (appliedCoupon) {
+          await useCoupon(appliedCoupon.id, order.id);
+        }
+      }
+
       // Simulate upload progress
       for (let i = 0; i <= 90; i += 10) {
         setUploadProgress(i);
@@ -150,8 +162,8 @@ export function CheckoutPage() {
         ? JSON.stringify({ email: userInput, password: userPassword })
         : userInput;
 
-      if (isSupabaseConfigured && orderId) {
-        await uploadPaymentScreenshot(orderId, screenshot, userProvidedData);
+      if (isSupabaseConfigured && currentOrderId) {
+        await uploadPaymentScreenshot(currentOrderId, screenshot, userProvidedData);
       }
       setUploadProgress(100);
 
@@ -222,6 +234,83 @@ export function CheckoutPage() {
                 </div>
               </div>
             </div>
+
+            {/* Coupon Code Section */}
+            <div className="bg-white rounded-2xl border-2 border-gray-200 p-4 md:p-6">
+              <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                <Ticket className="h-5 w-5 text-green-600" />
+                Have a Coupon?
+              </h3>
+              {appliedCoupon ? (
+                <div className="flex items-center justify-between bg-green-50 border-2 border-green-200 rounded-xl p-3">
+                  <div>
+                    <p className="font-semibold text-green-700">Coupon Applied!</p>
+                    <p className="text-sm text-green-600">₹{appliedCoupon.discountAmount} discount</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setAppliedCoupon(null)}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Enter coupon code"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    className="border-2 rounded-xl uppercase"
+                  />
+                  <Button
+                    onClick={async () => {
+                      if (!couponCode.trim()) return;
+                      setIsValidatingCoupon(true);
+                      try {
+                        const coupon = await validateCoupon(couponCode);
+                        setAppliedCoupon(coupon);
+                        toast({ title: 'Coupon applied!', description: `₹${coupon.discountAmount} discount` });
+                      } catch (error: any) {
+                        toast({ title: 'Invalid coupon', description: error.message, variant: 'destructive' });
+                      } finally {
+                        setIsValidatingCoupon(false);
+                      }
+                    }}
+                    disabled={isValidatingCoupon || !couponCode.trim()}
+                    className="rounded-xl"
+                  >
+                    {isValidatingCoupon ? '...' : 'Apply'}
+                  </Button>
+                </div>
+              )}
+              {availableCoupons.length > 0 && !appliedCoupon && (
+                <p className="text-xs text-green-600 mt-2">
+                  You have {availableCoupons.length} coupon{availableCoupons.length > 1 ? 's' : ''} available!
+                </p>
+              )}
+            </div>
+
+            {/* Final Price */}
+            {appliedCoupon && (
+              <div className="bg-green-50 rounded-2xl border-2 border-green-200 p-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Original Price:</span>
+                  <span className="text-gray-500 line-through">₹{(product.salePrice || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center text-green-600">
+                  <span>Coupon Discount:</span>
+                  <span>-₹{appliedCoupon.discountAmount}</span>
+                </div>
+                <div className="flex justify-between items-center mt-2 pt-2 border-t border-green-200">
+                  <span className="font-bold text-gray-900">Final Price:</span>
+                  <span className="text-2xl font-bold text-green-600">
+                    ₹{Math.max(0, (product.salePrice || 0) - appliedCoupon.discountAmount).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* Payment Instructions */}
             <div className="bg-amber-50 rounded-2xl border border-amber-200 p-6">

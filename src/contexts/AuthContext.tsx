@@ -57,8 +57,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .eq('id', userId)
         .single();
 
-      if (error) {
-        console.error('Error loading profile:', error);
+      if (error && error.code !== 'PGRST116') {
+        // Only log non-404 errors, and don't log network errors in detail
+        if (!error.message?.includes('Failed to fetch')) {
+          console.error('Error loading profile:', error);
+        }
         // If profile doesn't exist, try to get user info from auth
         const { data: authData } = await supabase.auth.getUser();
         if (authData?.user) {
@@ -95,8 +98,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           role: data.role as 'user' | 'admin',
         });
       }
-    } catch (error) {
-      console.error('Error loading user profile:', error);
+    } catch (err) {
+      // Silently handle network errors to avoid console spam
+      if (err instanceof Error && !err.message?.includes('Failed to fetch')) {
+        console.error('Error loading user profile:', err);
+      }
     } finally {
       setIsLoading(false);
     }
