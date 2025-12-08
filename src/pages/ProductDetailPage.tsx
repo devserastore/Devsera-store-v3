@@ -99,10 +99,10 @@ export function ProductDetailPage() {
 
   if (isLoading && isSupabaseConfigured) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-white to-amber-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-white to-amber-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 pb-20 md:pb-0">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-lg font-medium text-gray-600">Loading product...</p>
+          <p className="text-lg font-medium text-gray-600 dark:text-gray-400">Loading product...</p>
         </div>
       </div>
     );
@@ -110,13 +110,13 @@ export function ProductDetailPage() {
 
   if (!product) {
     return (
-      <div className="container mx-auto px-4 py-16 text-center">
+      <div className="container mx-auto px-4 py-16 text-center pb-20 md:pb-0">
         <div className="max-w-md mx-auto">
-          <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+          <div className="w-24 h-24 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-6">
             <Package className="h-10 w-10 text-gray-400" />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Product not found</h1>
-          <p className="text-gray-500 mb-6">The product you're looking for doesn't exist or has been removed.</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Product not found</h1>
+          <p className="text-gray-500 dark:text-gray-400 mb-6">The product you're looking for doesn't exist or has been removed.</p>
           <Button onClick={() => navigate('/')} className="btn-gradient">
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back to Products
@@ -140,13 +140,13 @@ export function ProductDetailPage() {
   const discountPercent = originalPrice > 0 ? Math.round((savings / originalPrice) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 pb-20 md:pb-0">
       <div className="container mx-auto px-4 py-6 md:py-8">
         {/* Back Button */}
         <Button
           variant="ghost"
           onClick={() => navigate('/')}
-          className="mb-6 rounded-xl hover:bg-gray-100 text-gray-600"
+          className="mb-6 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Products
@@ -180,16 +180,16 @@ export function ProductDetailPage() {
           {/* Details Section */}
           <div className="space-y-6">
             {/* Category Badge */}
-            <Badge variant="secondary" className="bg-gray-100 text-gray-600 hover:bg-gray-100 font-medium">
+            <Badge variant="secondary" className="bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 font-medium">
               {product.category}
             </Badge>
 
             {/* Title */}
-            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 leading-tight">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white leading-tight">
               {product.name}
             </h1>
             
-            <p className="text-lg text-gray-600">{product.description}</p>
+            <p className="text-lg text-gray-600 dark:text-gray-400">{product.description}</p>
 
             {/* Rating */}
             <div className="flex items-center gap-3">
@@ -198,15 +198,15 @@ export function ProductDetailPage() {
                   <Star key={i} className="h-5 w-5 fill-amber-400 text-amber-400" />
                 ))}
               </div>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-gray-500 dark:text-gray-400">
                 ({productReviews.length} reviews)
               </span>
             </div>
 
             {/* Price Card */}
-            <div className="bg-gradient-to-br from-teal-50 to-emerald-50 rounded-2xl p-6 border border-teal-100">
+            <div className="bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-900/20 dark:to-emerald-900/20 rounded-2xl p-6 border border-teal-100 dark:border-teal-800">
               <div className="flex items-baseline gap-3 mb-2">
-                <span className="text-4xl md:text-5xl font-extrabold text-gray-900">
+                <span className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white">
                   ₹{salePrice.toLocaleString()}
                 </span>
                 {originalPrice > salePrice && (
@@ -216,11 +216,11 @@ export function ProductDetailPage() {
                 )}
               </div>
               {savings > 0 && (
-                <p className="text-lg font-semibold text-emerald-600">
+                <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
                   Save ₹{savings.toLocaleString()} ({discountPercent}% OFF)
                 </p>
               )}
-              <div className="flex items-center gap-2 mt-4 text-gray-600">
+              <div className="flex items-center gap-2 mt-4 text-gray-600 dark:text-gray-400">
                 <Clock className="h-4 w-4" />
                 <span className="font-semibold">{product.duration} Access</span>
               </div>

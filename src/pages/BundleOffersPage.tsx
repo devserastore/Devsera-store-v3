@@ -30,17 +30,17 @@ export function BundleOffersPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-pink-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 pb-20 md:pb-0">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-lg font-medium text-gray-600">Loading bundle offers...</p>
+          <p className="text-lg font-medium text-gray-600 dark:text-gray-400">Loading bundle offers...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-purple-50 via-white to-pink-50">
+    <div className="min-h-screen bg-gradient-to-b from-purple-50 via-white to-pink-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 pb-20 md:pb-0">
       <div className="container mx-auto px-4 py-8 max-w-6xl">
         {/* Header */}
         <div className="text-center mb-12">
@@ -48,10 +48,10 @@ export function BundleOffersPage() {
             <Gift className="h-4 w-4" />
             Special Bundle Offers
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl md:text-5xl font-bold text-gray-900 dark:text-white mb-4">
             Save More with <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600">Bundles</span>
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
             Get multiple premium subscriptions at unbeatable prices. Limited time offers!
           </p>
         </div>
@@ -101,8 +101,8 @@ export function BundleOffersPage() {
                   </div>
 
                   <CardContent className="p-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-2">{bundle.name}</h3>
-                    <p className="text-gray-600 text-sm mb-4 line-clamp-2">{bundle.description}</p>
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{bundle.name}</h3>
+                    <p className="text-gray-600 dark:text-gray-400 text-sm mb-4 line-clamp-2">{bundle.description}</p>
 
                     {/* Products Included */}
                     <div className="mb-4">
@@ -128,11 +128,11 @@ export function BundleOffersPage() {
                     {/* Pricing */}
                     <div className="flex items-end justify-between mb-4">
                       <div>
-                        <p className="text-sm text-gray-500 line-through">₹{bundle.originalPrice.toLocaleString()}</p>
-                        <p className="text-3xl font-bold text-gray-900">₹{bundle.salePrice.toLocaleString()}</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 line-through">₹{bundle.originalPrice.toLocaleString()}</p>
+                        <p className="text-3xl font-bold text-gray-900 dark:text-white">₹{bundle.salePrice.toLocaleString()}</p>
                       </div>
                       <div className="text-right">
-                        <p className="text-sm text-green-600 font-semibold">
+                        <p className="text-sm text-green-600 dark:text-green-400 font-semibold">
                           Save ₹{(bundle.originalPrice - bundle.salePrice).toLocaleString()}
                         </p>
                       </div>
@@ -154,11 +154,11 @@ export function BundleOffersPage() {
           </div>
         ) : (
           <div className="text-center py-16">
-            <div className="w-24 h-24 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="w-24 h-24 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
               <Package className="h-12 w-12 text-purple-400" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">No Bundle Offers Available</h2>
-            <p className="text-gray-600 mb-6">Check back soon for amazing bundle deals!</p>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">No Bundle Offers Available</h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">Check back soon for amazing bundle deals!</p>
             <Button 
               onClick={() => navigate('/')}
               variant="outline"
@@ -170,29 +170,29 @@ export function BundleOffersPage() {
         )}
 
         {/* Why Bundles Section */}
-        <div className="mt-16 bg-white rounded-3xl border-2 border-gray-200 p-8 md:p-12">
-          <h2 className="text-2xl font-bold text-center text-gray-900 mb-8">Why Choose Bundles?</h2>
+        <div className="mt-16 bg-white dark:bg-gray-800 rounded-3xl border-2 border-gray-200 dark:border-gray-700 p-8 md:p-12">
+          <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white mb-8">Why Choose Bundles?</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Percent className="h-8 w-8 text-green-600" />
+              <div className="w-16 h-16 bg-green-100 dark:bg-green-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Percent className="h-8 w-8 text-green-600 dark:text-green-400" />
               </div>
-              <h3 className="font-bold text-gray-900 mb-2">Maximum Savings</h3>
-              <p className="text-gray-600 text-sm">Save up to 50% compared to buying individually</p>
+              <h3 className="font-bold text-gray-900 dark:text-white mb-2">Maximum Savings</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Save up to 50% compared to buying individually</p>
             </div>
             <div className="text-center">
-              <div className="w-16 h-16 bg-purple-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Package className="h-8 w-8 text-purple-600" />
+              <div className="w-16 h-16 bg-purple-100 dark:bg-purple-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Package className="h-8 w-8 text-purple-600 dark:text-purple-400" />
               </div>
-              <h3 className="font-bold text-gray-900 mb-2">All-in-One</h3>
-              <p className="text-gray-600 text-sm">Get multiple premium services in a single purchase</p>
+              <h3 className="font-bold text-gray-900 dark:text-white mb-2">All-in-One</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Get multiple premium services in a single purchase</p>
             </div>
             <div className="text-center">
-              <div className="w-16 h-16 bg-pink-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <Sparkles className="h-8 w-8 text-pink-600" />
+              <div className="w-16 h-16 bg-pink-100 dark:bg-pink-900/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Sparkles className="h-8 w-8 text-pink-600 dark:text-pink-400" />
               </div>
-              <h3 className="font-bold text-gray-900 mb-2">Exclusive Deals</h3>
-              <p className="text-gray-600 text-sm">Bundle-only prices not available elsewhere</p>
+              <h3 className="font-bold text-gray-900 dark:text-white mb-2">Exclusive Deals</h3>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">Bundle-only prices not available elsewhere</p>
             </div>
           </div>
         </div>

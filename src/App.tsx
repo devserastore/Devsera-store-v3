@@ -1,7 +1,10 @@
 import { Suspense } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
+import { WishlistProvider } from '@/contexts/WishlistContext';
 import { Header } from '@/components/shared/Header';
+import { BottomNav } from '@/components/shared/BottomNav';
 import { Toaster } from '@/components/ui/toaster';
 import { HomePage } from '@/pages/HomePage';
 import { ProductDetailPage } from '@/pages/ProductDetailPage';
@@ -17,6 +20,7 @@ import { RewardsPage } from '@/pages/RewardsPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { LiveChatWidget } from '@/pages/LiveChatWidget';
 import { AdminDashboard } from '@/pages/admin/AdminDashboard';
+import { OrderConfirmationPage } from '@/pages/OrderConfirmationPage';
 
 function ProtectedRoute({ children, adminOnly = false }: { children: React.ReactNode; adminOnly?: boolean }) {
   const { user, isLoading } = useAuth();
@@ -66,6 +70,14 @@ function AppRoutes() {
           }
         />
         <Route
+          path="/order-confirmation/:orderId"
+          element={
+            <ProtectedRoute>
+              <OrderConfirmationPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/orders"
           element={
             <ProtectedRoute>
@@ -82,6 +94,7 @@ function AppRoutes() {
           }
         />
       </Routes>
+      <BottomNav />
       <LiveChatWidget />
       <Toaster />
     </>
@@ -90,11 +103,15 @@ function AppRoutes() {
 
 function App() {
   return (
-    <AuthProvider>
-      <Suspense fallback={<p>Loading...</p>}>
-        <AppRoutes />
-      </Suspense>
-    </AuthProvider>
+    <ThemeProvider>
+      <WishlistProvider>
+        <AuthProvider>
+          <Suspense fallback={<p>Loading...</p>}>
+            <AppRoutes />
+          </Suspense>
+        </AuthProvider>
+      </WishlistProvider>
+    </ThemeProvider>
   );
 }
 

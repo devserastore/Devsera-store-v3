@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { Copy, Upload, CheckCircle2, ArrowLeft, Info, Key, Package, UserCheck, Zap, Ticket, X } from 'lucide-react';
+import { Copy, Upload, CheckCircle2, ArrowLeft, Info, Key, Package, UserCheck, Zap, Ticket, X, Clock } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { DeliveryType } from '@/types';
@@ -59,7 +59,7 @@ export function CheckoutPage() {
 
   if ((productLoading || settingsLoading) && isSupabaseConfigured) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-white to-amber-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-white to-amber-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 pb-20 md:pb-0">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-lg font-medium text-gray-600">Loading checkout...</p>
@@ -172,9 +172,16 @@ export function CheckoutPage() {
         description: 'Your payment is being verified. You will receive credentials within 2 hours.',
       });
 
+      // Navigate to order confirmation page
       setTimeout(() => {
-        navigate('/orders');
-      }, 1500);
+        navigate(`/order-confirmation/${currentOrderId}`, {
+          state: {
+            productName: product?.name,
+            productImage: product?.image,
+            amount: finalPrice
+          }
+        });
+      }, 1000);
     } catch (error: any) {
       toast({
         title: 'Upload failed',
@@ -186,20 +193,23 @@ export function CheckoutPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 pb-20 md:pb-0">
       <div className="container mx-auto px-4 py-6 md:py-8 max-w-5xl">
         <Button
           variant="ghost"
           onClick={() => navigate(`/product/${id}`)}
-          className="mb-6 rounded-xl hover:bg-gray-100 text-gray-600"
+          className="mb-6 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-400"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back
         </Button>
 
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-8">
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
           Complete Your Purchase
         </h1>
+        <p className="text-gray-500 dark:text-gray-400 mb-8">
+          Review your order and complete payment to get instant access
+        </p>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
           {/* Order Summary */}
@@ -407,18 +417,31 @@ export function CheckoutPage() {
 
             {/* Delivery Info */}
             {product.deliveryType && (
-              <div className={`bg-white rounded-2xl border border-gray-200 p-4 shadow-sm`}>
+              <div className={`bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 shadow-sm`}>
                 <div className="flex items-center gap-2 mb-2">
                   <div className={`${deliveryTypeInfo[product.deliveryType].color}`}>
                     {deliveryTypeInfo[product.deliveryType].icon}
                   </div>
-                  <span className="font-semibold text-gray-900">Delivery Method</span>
+                  <span className="font-semibold text-gray-900 dark:text-white">Delivery Method</span>
                 </div>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
                   {product.deliveryInstructions || 'You will receive your access within 2 hours of payment verification.'}
                 </p>
               </div>
             )}
+
+            {/* Estimated Delivery Time */}
+            <div className="bg-gradient-to-r from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-800 p-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
+                  <Clock className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-sm text-emerald-700 dark:text-emerald-400 font-medium">Estimated Delivery</p>
+                  <p className="text-lg font-bold text-gray-900 dark:text-white">Within 2 Hours</p>
+                </div>
+              </div>
+            </div>
 
             {/* User Input for Manual Activation */}
             {product.requiresUserInput && (
@@ -520,9 +543,22 @@ export function CheckoutPage() {
             <Button
               onClick={handleSubmit}
               disabled={!screenshot || isUploading || (product.requiresUserInput && !userInput.trim())}
-              className="w-full h-14 text-lg font-bold rounded-xl bg-[#0A7A7A] hover:bg-[#086666] text-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full h-14 text-lg font-bold rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white shadow-lg shadow-teal-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {isUploading ? 'Submitting...' : 'Submit Payment Proof'}
+              {isUploading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                  Processing Order...
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="h-5 w-5 mr-2" />
+                  Place Order - ₹{appliedCoupon 
+                    ? Math.max(0, (product.salePrice || 0) - appliedCoupon.discountAmount).toLocaleString()
+                    : (product.salePrice || 0).toLocaleString()
+                  }
+                </>
+              )}
             </Button>
 
             {/* Contact Support */}

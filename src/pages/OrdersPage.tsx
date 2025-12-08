@@ -1,13 +1,22 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useOrders } from '@/hooks/useOrders';
 import { StatusBadge } from '@/components/shared/StatusBadge';
+import { OrderStatusStepper } from '@/components/shared/OrderStatusStepper';
+import { OrderCredentialsCard } from '@/components/shared/OrderCredentialsCard';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Copy, Eye, Clock, CheckCircle2, XCircle, AlertCircle, Key, Package, UserCheck, Zap, RefreshCw } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Copy, Eye, Clock, CheckCircle2, XCircle, AlertCircle, Key, Package, UserCheck, Zap, RefreshCw, Download, RotateCcw, Truck, CreditCard, FileText, MessageCircle, Sparkles } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Order, OrderStatus, DeliveryType } from '@/types';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { isSupabaseConfigured } from '@/lib/supabase';
+import { OrderListSkeleton } from '@/components/shared/Skeleton';
+import { EmptyState } from '@/components/shared/EmptyState';
+import { useSettings } from '@/hooks/useSettings';
+import { mockSettings } from '@/data/mockData';
 
 const deliveryTypeLabels: Record<DeliveryType, { label: string; icon: React.ReactNode }> = {
   CREDENTIALS: { label: 'Login Credentials', icon: <Key className="h-4 w-4" /> },
@@ -17,399 +26,318 @@ const deliveryTypeLabels: Record<DeliveryType, { label: string; icon: React.Reac
 };
 
 export function OrdersPage() {
+  const navigate = useNavigate();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [filterStatus, setFilterStatus] = useState<OrderStatus | 'ALL'>('ALL');
   const { toast } = useToast();
   const { orders: dbOrders, isLoading, refetch } = useOrders();
+  const { settings: dbSettings } = useSettings();
+  const settings = dbSettings || (!isSupabaseConfigured ? mockSettings : null);
 
-  // Use database orders with their associated products
   const orders = dbOrders;
-
-  const filteredOrders = filterStatus === 'ALL'
-    ? orders
-    : orders.filter(o => o.status === filterStatus);
-
-  if (isLoading && isSupabaseConfigured) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-white to-amber-50">
-        <div className="text-center">
-          <RefreshCw className="w-12 h-12 animate-spin text-[#0A7A7A] mx-auto mb-4" />
-          <p className="text-lg font-medium text-gray-600">Loading orders...</p>
-        </div>
-      </div>
-    );
-  }
+  const filteredOrders = filterStatus === 'ALL' ? orders : orders.filter(o => o.status === filterStatus);
 
   const handleCopy = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
-    toast({
-      title: 'Copied!',
-      description: `${label} copied to clipboard`,
-    });
+    toast({ title: 'Copied!', description: `${label} copied to clipboard` });
+  };
+
+  const handleExportOrders = (format: 'csv' | 'pdf') => {
+    if (format === 'csv') {
+      const headers = ['Order ID', 'Product', 'Status', 'Amount', 'Date'];
+      const rows = orders.map(order => [
+        order.id, order.product?.name || 'Unknown', order.status,
+        `₹${order.product?.salePrice || 0}`, new Date(order.createdAt).toLocaleDateString()
+      ]);
+      const csvContent = [headers, ...rows].map(row => row.join(',')).join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `orders_${new Date().toISOString().split('T')[0]}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast({ title: 'Export Successful', description: 'Your orders have been exported to CSV' });
+    }
+  };
+
+  const handleReorder = (order: Order) => {
+    if (order.productId) navigate(`/product/${order.productId}`);
   };
 
   const getStatusIcon = (status: OrderStatus) => {
     switch (status) {
-      case 'PENDING':
-        return <Clock className="h-5 w-5 text-amber-500" />;
-      case 'SUBMITTED':
-        return <AlertCircle className="h-5 w-5 text-blue-500" />;
-      case 'COMPLETED':
-        return <CheckCircle2 className="h-5 w-5 text-green-500" />;
-      case 'CANCELLED':
-        return <XCircle className="h-5 w-5 text-red-500" />;
+      case 'PENDING': return <Clock className="h-5 w-5 text-amber-500" />;
+      case 'SUBMITTED': return <AlertCircle className="h-5 w-5 text-blue-500" />;
+      case 'COMPLETED': return <CheckCircle2 className="h-5 w-5 text-green-500" />;
+      case 'CANCELLED': return <XCircle className="h-5 w-5 text-red-500" />;
     }
   };
 
   const getStatusMessage = (status: OrderStatus) => {
     switch (status) {
-      case 'PENDING':
-        return 'Awaiting payment upload';
-      case 'SUBMITTED':
-        return 'Payment under verification';
-      case 'COMPLETED':
-        return 'Order completed successfully';
-      case 'CANCELLED':
-        return 'Order cancelled';
+      case 'PENDING': return 'Awaiting payment upload';
+      case 'SUBMITTED': return 'Payment under verification';
+      case 'COMPLETED': return 'Order completed successfully';
+      case 'CANCELLED': return 'Order cancelled';
     }
   };
 
+  const getEstimatedDelivery = (status: OrderStatus, createdAt: string) => {
+    if (status === 'COMPLETED' || status === 'CANCELLED') return null;
+    const created = new Date(createdAt);
+    return new Date(created.getTime() + 2 * 60 * 60 * 1000);
+  };
+
+  if (isLoading && isSupabaseConfigured) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 pb-20 md:pb-0">
+        <div className="container mx-auto px-4 py-6 md:py-8">
+          <div className="mb-8">
+            <div className="h-10 w-48 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse mb-2" />
+            <div className="h-5 w-64 bg-gray-200 dark:bg-gray-700 rounded-lg animate-pulse" />
+          </div>
+          <OrderListSkeleton count={3} />
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 pb-20 md:pb-0">
       <div className="container mx-auto px-4 py-6 md:py-8">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
           <div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-              My Orders
-            </h1>
-            <p className="text-gray-500">
-              Track and manage your subscription orders
-            </p>
+            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">My Orders</h1>
+            <p className="text-gray-500 dark:text-gray-400">Track and manage your subscription orders</p>
           </div>
-          <Button
-            variant="outline"
-            onClick={refetch}
-            disabled={isLoading}
-            className="border-2 border-black hover:bg-gray-100 w-fit"
-          >
-            <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => handleExportOrders('csv')} className="border-2 border-gray-200 dark:border-gray-700">
+              <Download className="h-4 w-4 mr-2" />Export CSV
+            </Button>
+            <Button variant="outline" onClick={refetch} disabled={isLoading} className="border-2 border-gray-200 dark:border-gray-700">
+              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />Refresh
+            </Button>
+          </div>
         </div>
 
-        {/* Filter Tabs */}
         <div className="mb-6 overflow-x-auto pb-2">
           <Tabs value={filterStatus} onValueChange={(v) => setFilterStatus(v as OrderStatus | 'ALL')}>
-            <TabsList className="bg-white border border-gray-200 rounded-xl p-1 inline-flex min-w-max">
-              <TabsTrigger value="ALL" className="rounded-lg data-[state=active]:bg-gray-900 data-[state=active]:text-white px-4">
-                All Orders
-              </TabsTrigger>
-              <TabsTrigger value="PENDING" className="rounded-lg data-[state=active]:bg-amber-500 data-[state=active]:text-white px-4">
-                Pending
-              </TabsTrigger>
-              <TabsTrigger value="SUBMITTED" className="rounded-lg data-[state=active]:bg-blue-500 data-[state=active]:text-white px-4">
-                Submitted
-              </TabsTrigger>
-              <TabsTrigger value="COMPLETED" className="rounded-lg data-[state=active]:bg-emerald-500 data-[state=active]:text-white px-4">
-                Completed
-              </TabsTrigger>
-              <TabsTrigger value="CANCELLED" className="rounded-lg data-[state=active]:bg-red-500 data-[state=active]:text-white px-4">
-                Cancelled
-              </TabsTrigger>
+            <TabsList className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-1 inline-flex min-w-max">
+              <TabsTrigger value="ALL" className="rounded-lg data-[state=active]:bg-gray-900 dark:data-[state=active]:bg-white data-[state=active]:text-white dark:data-[state=active]:text-gray-900 px-4">All Orders</TabsTrigger>
+              <TabsTrigger value="PENDING" className="rounded-lg data-[state=active]:bg-amber-500 data-[state=active]:text-white px-4">Pending</TabsTrigger>
+              <TabsTrigger value="SUBMITTED" className="rounded-lg data-[state=active]:bg-blue-500 data-[state=active]:text-white px-4">Submitted</TabsTrigger>
+              <TabsTrigger value="COMPLETED" className="rounded-lg data-[state=active]:bg-emerald-500 data-[state=active]:text-white px-4">Completed</TabsTrigger>
+              <TabsTrigger value="CANCELLED" className="rounded-lg data-[state=active]:bg-red-500 data-[state=active]:text-white px-4">Cancelled</TabsTrigger>
             </TabsList>
           </Tabs>
         </div>
 
-        {/* Orders List */}
         {filteredOrders.length === 0 ? (
-          <div className="bg-white rounded-2xl border-2 border-black p-12 text-center shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-            <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-gray-200">
-              <Package className="h-10 w-10 text-gray-400" />
-            </div>
-            <h3 className="text-xl font-bold text-gray-900 mb-2">No orders found</h3>
-            <p className="text-gray-500 mb-6">
-              {filterStatus === 'ALL' 
-                ? "You haven't placed any orders yet. Browse our products to get started!"
-                : `No ${filterStatus.toLowerCase()} orders found.`}
-            </p>
-            {filterStatus !== 'ALL' && (
-              <Button
-                variant="outline"
-                onClick={() => setFilterStatus('ALL')}
-                className="border-2 border-black"
-              >
-                View All Orders
-              </Button>
-            )}
-          </div>
+          <EmptyState
+            type="orders"
+            title={filterStatus === 'ALL' ? 'No orders yet' : `No ${filterStatus.toLowerCase()} orders`}
+            description={filterStatus === 'ALL' ? "You haven't placed any orders yet." : `No ${filterStatus.toLowerCase()} orders found.`}
+            actionLabel={filterStatus !== 'ALL' ? 'View All Orders' : 'Browse Products'}
+            onAction={() => filterStatus !== 'ALL' ? setFilterStatus('ALL') : navigate('/')}
+          />
         ) : (
           <div className="space-y-4">
-            {filteredOrders.map(order => (
-              <div key={order.id} className="bg-white rounded-2xl border-2 border-black p-4 md:p-6 hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] transition-all">
-                <div className="flex flex-col sm:flex-row sm:items-start gap-4">
-                  {order.product && (
-                    <img
-                      src={order.product.image || 'https://images.unsplash.com/photo-1557821552-17105176677c?w=800&q=80'}
-                      alt={order.product.name}
-                      className="w-full sm:w-20 h-32 sm:h-20 object-cover rounded-xl bg-gray-100 border-2 border-black"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = 'https://images.unsplash.com/photo-1557821552-17105176677c?w=800&q=80';
-                      }}
-                    />
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-900">
-                          {order.product?.name || 'Unknown Product'}
-                        </h3>
-                        <p className="text-sm font-mono text-gray-500">
-                          Order ID: {order.id.slice(0, 8)}...
-                        </p>
+            {filteredOrders.map(order => {
+              const estimatedDelivery = getEstimatedDelivery(order.status, order.createdAt);
+              return (
+                <div key={order.id} className="bg-white dark:bg-gray-800 rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-4 md:p-6 hover:shadow-lg transition-all">
+                  <div className="flex flex-col sm:flex-row sm:items-start gap-4">
+                    {order.product && (
+                      <img src={order.product.image || 'https://images.unsplash.com/photo-1557821552-17105176677c?w=800&q=80'} alt={order.product.name}
+                        className="w-full sm:w-20 h-32 sm:h-20 object-cover rounded-xl bg-gray-100 dark:bg-gray-700 border-2 border-gray-200 dark:border-gray-600"
+                        onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1557821552-17105176677c?w=800&q=80'; }}
+                      />
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-2">
+                        <div>
+                          <h3 className="text-lg font-bold text-gray-900 dark:text-white">{order.product?.name || 'Unknown Product'}</h3>
+                          <p className="text-sm font-mono text-gray-500 dark:text-gray-400">Order ID: {order.id.slice(0, 8)}...</p>
+                        </div>
+                        <StatusBadge status={order.status} />
                       </div>
-                      <StatusBadge status={order.status} />
+                      <div className="flex flex-wrap items-center gap-2 md:gap-4 text-sm text-gray-500 dark:text-gray-400 mb-3">
+                        <span>{new Date(order.createdAt).toLocaleDateString()}</span>
+                        <span className="hidden md:inline">•</span>
+                        <span className="font-bold text-teal-600 dark:text-teal-400 text-lg">₹{(order.product?.salePrice || 0).toLocaleString()}</span>
+                      </div>
+                      {estimatedDelivery && (
+                        <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400 mb-3 bg-amber-50 dark:bg-amber-900/20 px-3 py-1.5 rounded-lg w-fit">
+                          <Truck className="h-4 w-4" />
+                          <span>Est. delivery: {estimatedDelivery.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                      )}
+                      <div className="flex items-center gap-2">
+                        {getStatusIcon(order.status)}
+                        <span className="text-sm text-gray-600 dark:text-gray-300">{getStatusMessage(order.status)}</span>
+                      </div>
+                      
+                      {/* Compact Status Stepper for non-completed orders */}
+                      {order.status !== 'COMPLETED' && order.status !== 'CANCELLED' && (
+                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <OrderStatusStepper 
+                            status={order.status} 
+                            createdAt={order.createdAt} 
+                            updatedAt={order.updatedAt}
+                            compact
+                          />
+                        </div>
+                      )}
+                      
+                      {/* Quick Credentials Preview for Completed Orders */}
+                      {order.status === 'COMPLETED' && order.credentials && (
+                        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Sparkles className="h-4 w-4 text-emerald-500" />
+                            <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">Credentials Ready!</span>
+                          </div>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Click "View Details" to see your login credentials</p>
+                        </div>
+                      )}
                     </div>
-                    <div className="flex flex-wrap items-center gap-2 md:gap-4 text-sm text-gray-500 mb-3">
-                      <span>
-                        {new Date(order.createdAt).toLocaleDateString()}
-                      </span>
-                      <span className="hidden md:inline">•</span>
-                      <span className="font-bold text-[#0A7A7A] text-lg">
-                        ₹{(order.product?.salePrice || 0).toLocaleString()}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(order.status)}
-                      <span className="text-sm text-gray-600">{getStatusMessage(order.status)}</span>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      {order.status === 'COMPLETED' && (
+                        <Button onClick={() => handleReorder(order)} variant="outline" className="rounded-xl border-2 border-teal-500 text-teal-600 hover:bg-teal-50 dark:hover:bg-teal-900/20">
+                          <RotateCcw className="h-4 w-4 mr-2" />Reorder
+                        </Button>
+                      )}
+                      <Button onClick={() => setSelectedOrder(order)} variant="outline" className={`rounded-xl border-2 ${
+                        order.status === 'COMPLETED' 
+                          ? 'border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-900/20' 
+                          : 'border-gray-200 dark:border-gray-600 hover:bg-teal-500 hover:text-white hover:border-teal-500'
+                      }`}>
+                        <Eye className="h-4 w-4 mr-2" />
+                        {order.status === 'COMPLETED' ? 'View Credentials' : 'View Details'}
+                      </Button>
                     </div>
                   </div>
-                  <Button
-                    onClick={() => setSelectedOrder(order)}
-                    variant="outline"
-                    className="w-full sm:w-auto rounded-xl border-2 border-black hover:bg-[#0A7A7A] hover:text-white hover:border-[#0A7A7A]"
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    View Details
-                  </Button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
 
-        {/* Order Detail Dialog */}
         <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
-          <DialogContent className="max-w-2xl border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
-            <DialogHeader className="border-b-2 border-black pb-4">
-              <DialogTitle className="text-2xl font-bold font-['Space_Grotesk']">
-                Order Details
+          <DialogContent className="max-w-2xl border-2 border-gray-200 dark:border-gray-700 shadow-xl max-h-[90vh] overflow-hidden">
+            <DialogHeader className="border-b-2 border-gray-200 dark:border-gray-700 pb-4">
+              <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+                {selectedOrder?.status === 'COMPLETED' ? (
+                  <>
+                    <CheckCircle2 className="h-6 w-6 text-emerald-500" />
+                    Order Delivered
+                  </>
+                ) : (
+                  <>
+                    <Package className="h-6 w-6 text-teal-500" />
+                    Order Details
+                  </>
+                )}
               </DialogTitle>
             </DialogHeader>
-
             {selectedOrder && (
-              <div className="space-y-6">
-                {/* Order Info */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Order ID</span>
-                    <span className="font-mono font-semibold">{selectedOrder.id}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Product</span>
-                    <span className="font-semibold">{selectedOrder.product?.name}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Status</span>
-                    <StatusBadge status={selectedOrder.status} />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Amount</span>
-                    <span className="text-xl font-bold text-primary">
-                      ₹{selectedOrder.product?.salePrice}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Timeline */}
-                <div className="border-t-2 border-black pt-6">
-                  <h3 className="font-bold font-['Space_Grotesk'] mb-4">Order Timeline</h3>
-                  <div className="space-y-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="mt-1">
-                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+              <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+                {/* Order Info Card */}
+                <Card className="border-2 border-gray-200 dark:border-gray-700">
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-4 mb-4">
+                      <img 
+                        src={selectedOrder.product?.image || 'https://images.unsplash.com/photo-1557821552-17105176677c?w=200&q=80'} 
+                        alt={selectedOrder.product?.name}
+                        className="w-16 h-16 object-cover rounded-xl border-2 border-gray-200 dark:border-gray-700"
+                      />
+                      <div className="flex-1">
+                        <h3 className="font-bold text-gray-900 dark:text-white">{selectedOrder.product?.name}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{selectedOrder.product?.duration}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xl font-bold text-teal-600 dark:text-teal-400">₹{selectedOrder.product?.salePrice}</p>
+                        <StatusBadge status={selectedOrder.status} />
+                      </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <p className="text-gray-500 dark:text-gray-400">Order ID</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-mono font-semibold text-gray-900 dark:text-white">{selectedOrder.id.slice(0, 8)}...</p>
+                          <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => handleCopy(selectedOrder.id, 'Order ID')}>
+                            <Copy className="h-3 w-3" />
+                          </Button>
+                        </div>
                       </div>
                       <div>
-                        <p className="font-semibold">Order Created</p>
-                        <p className="text-sm text-muted-foreground font-mono">
-                          {new Date(selectedOrder.createdAt).toLocaleString()}
-                        </p>
+                        <p className="text-gray-500 dark:text-gray-400">Order Date</p>
+                        <p className="font-semibold text-gray-900 dark:text-white">{new Date(selectedOrder.createdAt).toLocaleDateString()}</p>
                       </div>
                     </div>
-                    {selectedOrder.status !== 'PENDING' && (
-                      <div className="flex items-start space-x-3">
-                        <div className="mt-1">
-                          <CheckCircle2 className="h-5 w-5 text-green-500" />
-                        </div>
-                        <div>
-                          <p className="font-semibold">Payment Submitted</p>
-                          <p className="text-sm text-muted-foreground font-mono">
-                            {new Date(selectedOrder.updatedAt).toLocaleString()}
-                          </p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                  </CardContent>
+                </Card>
 
-                {/* Credentials */}
-                {selectedOrder.status === 'COMPLETED' && selectedOrder.credentials && (
-                  <div className="border-t-2 border-black pt-6">
-                    <h3 className="font-bold font-['Space_Grotesk'] mb-4 flex items-center gap-2">
-                      {deliveryTypeLabels[selectedOrder.product?.deliveryType || 'CREDENTIALS'].icon}
-                      {selectedOrder.product?.deliveryType === 'MANUAL_ACTIVATION' 
-                        ? 'Activation Status' 
-                        : selectedOrder.product?.deliveryType === 'COUPON_CODE' || selectedOrder.product?.deliveryType === 'INSTANT_KEY'
-                        ? 'Your License/Code'
-                        : 'Account Credentials'}
+                {/* Order Status Stepper */}
+                <Card className="border-2 border-gray-200 dark:border-gray-700">
+                  <CardContent className="p-4">
+                    <h3 className="font-bold mb-4 flex items-center gap-2 text-gray-900 dark:text-white">
+                      <FileText className="h-5 w-5 text-gray-500" />
+                      Order Timeline
                     </h3>
-                    <div className="space-y-3">
-                      {/* Username/Password for CREDENTIALS type */}
-                      {selectedOrder.credentials.username && (
-                        <div className="bg-muted p-4 rounded-lg border-2 border-black">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-semibold">Username</span>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleCopy(selectedOrder.credentials!.username!, 'Username')}
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <p className="font-mono text-sm">{selectedOrder.credentials.username}</p>
-                        </div>
-                      )}
-                      {selectedOrder.credentials.password && (
-                        <div className="bg-muted p-4 rounded-lg border-2 border-black">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-semibold">Password</span>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleCopy(selectedOrder.credentials!.password!, 'Password')}
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <p className="font-mono text-sm">{selectedOrder.credentials.password}</p>
-                        </div>
-                      )}
+                    <OrderStatusStepper 
+                      status={selectedOrder.status} 
+                      createdAt={selectedOrder.createdAt} 
+                      updatedAt={selectedOrder.updatedAt}
+                    />
+                  </CardContent>
+                </Card>
 
-                      {/* Coupon Code */}
-                      {selectedOrder.credentials.couponCode && (
-                        <div className="bg-purple-50 p-4 rounded-lg border-2 border-purple-500">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-semibold text-purple-700">Coupon Code</span>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleCopy(selectedOrder.credentials!.couponCode!, 'Coupon Code')}
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <p className="font-mono text-lg font-bold text-purple-700">{selectedOrder.credentials.couponCode}</p>
-                        </div>
-                      )}
-
-                      {/* License Key */}
-                      {selectedOrder.credentials.licenseKey && (
-                        <div className="bg-blue-50 p-4 rounded-lg border-2 border-blue-500">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-semibold text-blue-700">License Key</span>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleCopy(selectedOrder.credentials!.licenseKey!, 'License Key')}
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <p className="font-mono text-lg font-bold text-blue-700">{selectedOrder.credentials.licenseKey}</p>
-                        </div>
-                      )}
-
-                      {/* Activation Link */}
-                      {selectedOrder.credentials.activationLink && (
-                        <div className="bg-teal-50 p-4 rounded-lg border-2 border-teal-500">
-                          <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm font-semibold text-teal-700">Activation Link</span>
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => handleCopy(selectedOrder.credentials!.activationLink!, 'Activation Link')}
-                            >
-                              <Copy className="h-4 w-4" />
-                            </Button>
-                          </div>
-                          <a 
-                            href={selectedOrder.credentials.activationLink} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 bg-teal-600 text-white px-4 py-2 rounded-lg font-semibold hover:bg-teal-700 transition-colors"
-                          >
-                            Click to Activate
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                            </svg>
-                          </a>
-                        </div>
-                      )}
-
-                      {/* Activation Status for MANUAL_ACTIVATION */}
-                      {selectedOrder.credentials.activationStatus && (
-                        <div className="bg-green-50 p-4 rounded-lg border-2 border-green-500">
-                          <div className="flex items-center gap-2 mb-2">
-                            <CheckCircle2 className="h-5 w-5 text-green-600" />
-                            <span className="text-sm font-semibold text-green-700">Activation Status</span>
-                          </div>
-                          <p className="font-semibold text-green-700">{selectedOrder.credentials.activationStatus}</p>
-                          {selectedOrder.credentials.activationNotes && (
-                            <p className="text-sm text-green-600 mt-2">{selectedOrder.credentials.activationNotes}</p>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Additional Info */}
-                      {selectedOrder.credentials.additionalInfo && (
-                        <div className="bg-gray-50 p-4 rounded-lg border-2 border-gray-300">
-                          <span className="text-sm font-semibold">Additional Instructions</span>
-                          <p className="text-sm mt-1">{selectedOrder.credentials.additionalInfo}</p>
-                        </div>
-                      )}
-
-                      {/* Expiry Warning */}
-                      {selectedOrder.credentials.expiryDate && (
-                        <div className="bg-amber-50 border-2 border-amber-500 p-4 rounded-lg">
-                          <p className="text-sm font-semibold text-amber-800">
-                            ⚠️ Expires on: {new Date(selectedOrder.credentials.expiryDate).toLocaleDateString()}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
+                {/* Credentials Card for Completed Orders */}
+                {selectedOrder.status === 'COMPLETED' && selectedOrder.credentials && (
+                  <OrderCredentialsCard
+                    credentials={selectedOrder.credentials}
+                    deliveryType={selectedOrder.product?.deliveryType || 'CREDENTIALS'}
+                    productName={selectedOrder.product?.name || 'Product'}
+                    productDuration={selectedOrder.product?.duration}
+                  />
                 )}
 
                 {/* Cancellation Reason */}
                 {selectedOrder.status === 'CANCELLED' && selectedOrder.cancellationReason && (
-                  <div className="border-t-2 border-black pt-6">
-                    <h3 className="font-bold font-['Space_Grotesk'] mb-2 text-red-600">
-                      Cancellation Reason
-                    </h3>
-                    <p className="text-sm">{selectedOrder.cancellationReason}</p>
-                  </div>
+                  <Card className="border-2 border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20">
+                    <CardContent className="p-4">
+                      <h3 className="font-bold mb-2 text-red-600 dark:text-red-400 flex items-center gap-2">
+                        <XCircle className="h-5 w-5" />
+                        Cancellation Reason
+                      </h3>
+                      <p className="text-sm text-red-700 dark:text-red-300">{selectedOrder.cancellationReason}</p>
+                    </CardContent>
+                  </Card>
                 )}
+
+                {/* Support Link */}
+                <div className="text-center pt-4 border-t border-gray-200 dark:border-gray-700">
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Need help with this order?{' '}
+                    {settings?.telegramUsername ? (
+                      <a
+                        href={`https://t.me/${settings.telegramUsername.replace('@', '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#0088cc] font-semibold hover:underline inline-flex items-center gap-1"
+                      >
+                        <MessageCircle className="h-4 w-4" />
+                        Contact Support
+                      </a>
+                    ) : (
+                      <a href="/support" className="text-teal-600 dark:text-teal-400 font-semibold hover:underline">
+                        Contact Support
+                      </a>
+                    )}
+                  </p>
+                </div>
               </div>
             )}
           </DialogContent>

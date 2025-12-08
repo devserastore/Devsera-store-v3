@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
@@ -10,11 +11,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { User, ShoppingBag, LayoutDashboard, LogOut, Menu, X, ChevronDown, Package, Phone, Ticket, Gift } from 'lucide-react';
+import { User, ShoppingBag, LayoutDashboard, LogOut, Menu, X, ChevronDown, Package, Phone, Ticket, Gift, Moon, Sun } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 
 export function Header() {
   const { user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -40,27 +42,17 @@ export function Header() {
 
   const NavLinks = ({ mobile = false }: { mobile?: boolean }) => (
     <>
-      {user && (
-        <Link 
-          to="/profile" 
-          onClick={() => setIsOpen(false)}
-          className={`font-semibold transition-colors hover:text-primary flex items-center gap-1 ${mobile ? 'text-base py-2' : 'text-sm'}`}
-        >
-          <User className="h-4 w-4" />
-          Profile
-        </Link>
-      )}
       <Link 
         to="/" 
         onClick={() => setIsOpen(false)}
-        className={`font-semibold transition-colors hover:text-primary ${mobile ? 'text-base py-2' : 'text-sm'}`}
+        className={`font-semibold transition-colors text-gray-700 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 ${mobile ? 'text-base py-2' : 'text-sm'}`}
       >
         Products
       </Link>
       <Link 
         to="/bundles" 
         onClick={() => setIsOpen(false)}
-        className={`font-semibold transition-colors hover:text-primary flex items-center gap-1 ${mobile ? 'text-base py-2' : 'text-sm'}`}
+        className={`font-semibold transition-colors text-gray-700 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 flex items-center gap-1 ${mobile ? 'text-base py-2' : 'text-sm'}`}
       >
         <Package className="h-4 w-4" />
         Bundles
@@ -68,14 +60,22 @@ export function Header() {
       <Link 
         to="/community" 
         onClick={() => setIsOpen(false)}
-        className={`font-semibold transition-colors hover:text-primary ${mobile ? 'text-base py-2' : 'text-sm'}`}
+        className={`font-semibold transition-colors text-gray-700 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 ${mobile ? 'text-base py-2' : 'text-sm'}`}
       >
         Community
       </Link>
       <Link 
+        to="/rewards" 
+        onClick={() => setIsOpen(false)}
+        className={`font-semibold transition-colors text-gray-700 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 flex items-center gap-1 ${mobile ? 'text-base py-2' : 'text-sm'}`}
+      >
+        <Gift className="h-4 w-4" />
+        Rewards
+      </Link>
+      <Link 
         to="/contact" 
         onClick={() => setIsOpen(false)}
-        className={`font-semibold transition-colors hover:text-primary flex items-center gap-1 ${mobile ? 'text-base py-2' : 'text-sm'}`}
+        className={`font-semibold transition-colors text-gray-700 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 flex items-center gap-1 ${mobile ? 'text-base py-2' : 'text-sm'}`}
       >
         <Phone className="h-4 w-4" />
         Contact
@@ -83,24 +83,16 @@ export function Header() {
       <Link 
         to="/support" 
         onClick={() => setIsOpen(false)}
-        className={`font-semibold transition-colors hover:text-primary flex items-center gap-1 ${mobile ? 'text-base py-2' : 'text-sm'}`}
+        className={`font-semibold transition-colors text-gray-700 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 flex items-center gap-1 ${mobile ? 'text-base py-2' : 'text-sm'}`}
       >
         <Ticket className="h-4 w-4" />
         Support
-      </Link>
-      <Link 
-        to="/rewards" 
-        onClick={() => setIsOpen(false)}
-        className={`font-semibold transition-colors hover:text-primary flex items-center gap-1 ${mobile ? 'text-base py-2' : 'text-sm'}`}
-      >
-        <Gift className="h-4 w-4" />
-        Rewards
       </Link>
       {user && (
         <Link 
           to="/orders" 
           onClick={() => setIsOpen(false)}
-          className={`font-semibold transition-colors hover:text-primary ${mobile ? 'text-base py-2' : 'text-sm'}`}
+          className={`font-semibold transition-colors text-gray-700 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 ${mobile ? 'text-base py-2' : 'text-sm'}`}
         >
           My Orders
         </Link>
@@ -109,7 +101,7 @@ export function Header() {
         <Link 
           to="/admin" 
           onClick={() => setIsOpen(false)}
-          className={`font-semibold transition-colors hover:text-primary ${mobile ? 'text-base py-2' : 'text-sm'}`}
+          className={`font-semibold transition-colors text-gray-700 dark:text-gray-300 hover:text-teal-600 dark:hover:text-teal-400 ${mobile ? 'text-base py-2' : 'text-sm'}`}
         >
           Admin
         </Link>
@@ -118,7 +110,7 @@ export function Header() {
   );
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white/80 backdrop-blur-lg border-b border-gray-200 shadow-sm">
+    <header className="sticky top-0 z-50 w-full bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg border-b border-gray-200 dark:border-gray-800 shadow-sm">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
@@ -126,7 +118,7 @@ export function Header() {
             <div className="w-9 h-9 bg-gradient-to-br from-teal-500 to-emerald-600 rounded-xl flex items-center justify-center shadow-lg shadow-teal-500/25 group-hover:shadow-teal-500/40 transition-shadow">
               <ShoppingBag className="h-5 w-5 text-white" />
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+            <span className="text-xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
               Devsera Store
             </span>
           </Link>
@@ -138,6 +130,20 @@ export function Header() {
 
           {/* Auth Section */}
           <div className="flex items-center space-x-3">
+            {/* Dark Mode Toggle */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={toggleTheme}
+              className="rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800"
+            >
+              {theme === 'dark' ? (
+                <Sun className="h-5 w-5 text-amber-500" />
+              ) : (
+                <Moon className="h-5 w-5 text-gray-600" />
+              )}
+            </Button>
+
             {user ? (
               <>
                 {/* Desktop User Menu */}
@@ -145,7 +151,7 @@ export function Header() {
                   <DropdownMenuTrigger asChild>
                     <Button 
                       variant="ghost" 
-                      className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-gray-100 transition-colors"
+                      className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                     >
                       <Avatar className="h-8 w-8 border-2 border-primary/20">
                         <AvatarFallback className="bg-gradient-to-br from-teal-500 to-emerald-600 text-white text-sm font-semibold">
@@ -153,8 +159,8 @@ export function Header() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="text-left">
-                        <p className="text-sm font-semibold text-gray-900 leading-tight">{user.name}</p>
-                        <p className="text-xs text-gray-500 leading-tight">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white leading-tight">{user.name}</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 leading-tight">
                           {user.role === 'admin' ? 'Administrator' : 'Member'}
                         </p>
                       </div>
@@ -229,12 +235,7 @@ export function Header() {
                 <div className="flex flex-col h-full">
                   {/* Mobile Header */}
                   <div className="flex items-center justify-between p-4 border-b border-gray-100">
-                    <span className="text-lg font-bold text-gray-900">Menu</span>
-                    <SheetClose asChild>
-                      <Button variant="ghost" size="icon" className="rounded-xl hover:bg-gray-100">
-                        <X className="h-5 w-5" />
-                      </Button>
-                    </SheetClose>
+                    <span className="text-lg font-bold text-gray-900 dark:text-white">Menu</span>
                   </div>
 
                   {/* User Profile Section (Mobile) */}

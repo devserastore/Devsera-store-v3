@@ -81,16 +81,16 @@ export function CommunityPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 pb-20 md:pb-0">
       <div className="container mx-auto px-4 py-6 md:py-8 max-w-3xl">
         {/* Header */}
         <div className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
             <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white">
                 Community
               </h1>
-              <p className="text-gray-500 mt-1">
+              <p className="text-gray-500 dark:text-gray-400 mt-1">
                 Share your experiences and connect with other users
               </p>
             </div>
@@ -106,9 +106,9 @@ export function CommunityPage() {
 
         {/* Create Post */}
         {user ? (
-          <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-8 shadow-sm">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 mb-8 shadow-sm">
             <div className="flex items-start gap-4">
-              <Avatar className="h-10 w-10 border-2 border-gray-100">
+              <Avatar className="h-10 w-10 border-2 border-gray-100 dark:border-gray-700">
                 <AvatarImage src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`} />
                 <AvatarFallback className="bg-gradient-to-br from-teal-500 to-emerald-600 text-white">
                   {user.name[0]}
@@ -119,7 +119,7 @@ export function CommunityPage() {
                   placeholder="Share your experience with the community..."
                   value={newPost}
                   onChange={(e) => setNewPost(e.target.value)}
-                  className="border-2 border-gray-200 rounded-xl min-h-[100px] resize-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20"
+                  className="border-2 border-gray-200 dark:border-gray-700 rounded-xl min-h-[100px] resize-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 bg-white dark:bg-gray-900"
                 />
                 <div className="flex justify-end">
                   <Button
@@ -135,12 +135,12 @@ export function CommunityPage() {
             </div>
           </div>
         ) : (
-          <div className="bg-gray-50 rounded-2xl border border-gray-200 p-6 mb-8 text-center">
-            <p className="text-gray-600 mb-3">Login to share your experience with the community</p>
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 mb-8 text-center">
+            <p className="text-gray-600 dark:text-gray-400 mb-3">Login to share your experience with the community</p>
             <Button
               onClick={() => window.location.href = '/login'}
               variant="outline"
-              className="rounded-xl border-2 border-black"
+              className="rounded-xl border-2 border-gray-900 dark:border-gray-300"
             >
               Login to Post
             </Button>
@@ -150,9 +150,9 @@ export function CommunityPage() {
         {/* Posts Feed */}
         <div className="space-y-4">
           {posts.map(post => (
-            <div key={post.id} className="bg-white rounded-2xl border border-gray-200 p-6 hover:shadow-lg hover:border-gray-300 transition-all">
+            <div key={post.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 hover:shadow-lg hover:border-gray-300 dark:hover:border-gray-600 transition-all">
               <div className="flex items-start gap-4">
-                <Avatar className="h-10 w-10 border-2 border-gray-100">
+                <Avatar className="h-10 w-10 border-2 border-gray-100 dark:border-gray-700">
                   <AvatarImage src={post.userAvatar} />
                   <AvatarFallback className="bg-gradient-to-br from-teal-500 to-emerald-600 text-white">
                     {post.userName[0]}
@@ -161,22 +161,22 @@ export function CommunityPage() {
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-2">
                     <div>
-                      <p className="font-semibold text-gray-900">{post.userName}</p>
-                      <p className="text-sm text-gray-500">
+                      <p className="font-semibold text-gray-900 dark:text-white">{post.userName}</p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
                         {formatTimeAgo(post.createdAt)}
                       </p>
                     </div>
                   </div>
-                  <p className="text-gray-700 mb-4 leading-relaxed">{post.content}</p>
+                  <p className="text-gray-700 dark:text-gray-300 mb-4 leading-relaxed">{post.content}</p>
                   <div className="flex items-center gap-6">
                     <button 
                       onClick={() => likePost(post.id)}
-                      className="flex items-center gap-2 text-gray-500 hover:text-red-500 transition-colors group"
+                      className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-red-500 transition-colors group"
                     >
                       <Heart className="h-5 w-5 group-hover:scale-110 transition-transform" />
                       <span className="text-sm font-semibold">{post.likes}</span>
                     </button>
-                    <button className="flex items-center gap-2 text-gray-500 hover:text-teal-600 transition-colors group">
+                    <button className="flex items-center gap-2 text-gray-500 dark:text-gray-400 hover:text-teal-600 transition-colors group">
                       <MessageCircle className="h-5 w-5 group-hover:scale-110 transition-transform" />
                       <span className="text-sm font-semibold">{post.comments}</span>
                     </button>
@@ -188,14 +188,14 @@ export function CommunityPage() {
         </div>
 
         {!user && (
-          <div className="bg-gradient-to-br from-teal-50 to-emerald-50 rounded-2xl p-8 text-center mt-8 border border-teal-100">
-            <div className="w-16 h-16 bg-teal-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Users className="h-8 w-8 text-teal-600" />
+          <div className="bg-gradient-to-br from-teal-50 to-emerald-50 dark:from-teal-900/20 dark:to-emerald-900/20 rounded-2xl p-8 text-center mt-8 border border-teal-100 dark:border-teal-800">
+            <div className="w-16 h-16 bg-teal-100 dark:bg-teal-900/50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Users className="h-8 w-8 text-teal-600 dark:text-teal-400" />
             </div>
-            <p className="text-lg font-semibold text-gray-900 mb-2">
+            <p className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               Join the community
             </p>
-            <p className="text-gray-600 mb-6">
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               Sign up to share your experiences and connect with other users
             </p>
             <Button
