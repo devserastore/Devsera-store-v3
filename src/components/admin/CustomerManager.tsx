@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Search, Users, Mail, Calendar } from 'lucide-react';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { useSettings } from '@/hooks/useSettings';
 
 interface Customer {
   id: string;
@@ -58,6 +59,7 @@ export function CustomerManager() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const { settings } = useSettings();
 
   useEffect(() => {
     loadCustomers();
@@ -164,7 +166,7 @@ export function CustomerManager() {
           <div>
             <p className="font-semibold text-blue-800">Customer Support Contact</p>
             <p className="text-sm text-blue-600">
-              Customers can reach you directly on Telegram: <span className="font-mono font-bold">@karthik_nkn</span>
+              Customers can reach you directly on Telegram: <span className="font-mono font-bold">{settings?.telegramUsername || '@karthik_nkn'}</span>
             </p>
           </div>
         </div>

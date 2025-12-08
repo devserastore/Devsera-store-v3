@@ -1,12 +1,14 @@
 import { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ProductGrid } from '@/components/products/ProductGrid';
 import { useProducts } from '@/hooks/useProducts';
+import { useBundles } from '@/hooks/useBundles';
 import { mockProducts } from '@/data/mockData';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Slider } from '@/components/ui/slider';
-import { Search, Filter, X, Sparkles, Shield, Clock, HeadphonesIcon } from 'lucide-react';
+import { Search, Filter, X, Sparkles, Shield, Clock, HeadphonesIcon, Gift, ArrowRight } from 'lucide-react';
 import {
   Sheet,
   SheetContent,
@@ -16,11 +18,13 @@ import {
 } from '@/components/ui/sheet';
 
 export function HomePage() {
+  const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [priceRange, setPriceRange] = useState<[number, number]>([0, 5000]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const { products: dbProducts, isLoading } = useProducts();
+  const { bundles } = useBundles();
   
   // Use mock data if Supabase is not configured
   const products = isSupabaseConfigured && dbProducts.length > 0 ? dbProducts : mockProducts;
@@ -174,6 +178,38 @@ export function HomePage() {
           </svg>
         </div>
       </section>
+
+      {/* Bundle Offers Banner */}
+      {bundles.length > 0 && (
+        <section className="container mx-auto px-4 pb-8">
+          <div 
+            onClick={() => navigate('/bundles')}
+            className="bg-gradient-to-r from-purple-600 via-pink-600 to-purple-600 rounded-2xl p-6 md:p-8 cursor-pointer hover:shadow-xl transition-all group"
+          >
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
+                  <Gift className="h-7 w-7 text-white" />
+                </div>
+                <div className="text-center md:text-left">
+                  <h3 className="text-xl md:text-2xl font-bold text-white">
+                    🎉 Special Bundle Offers Available!
+                  </h3>
+                  <p className="text-white/80 text-sm md:text-base">
+                    Save up to 50% when you buy multiple subscriptions together
+                  </p>
+                </div>
+              </div>
+              <Button 
+                className="bg-white text-purple-600 hover:bg-gray-100 font-semibold rounded-xl group-hover:scale-105 transition-transform"
+              >
+                View Bundles
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Products Section */}
       <section className="container mx-auto px-4 py-8 md:py-16">

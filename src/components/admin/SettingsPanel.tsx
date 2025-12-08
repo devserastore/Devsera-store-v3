@@ -313,6 +313,22 @@ export function SettingsPanel() {
                   </div>
                 </div>
                 <div>
+                  <Label htmlFor="telegramUsername" className="font-medium text-gray-900">
+                    Telegram Username (for direct contact)
+                  </Label>
+                  <div className="relative mt-1.5">
+                    <MessageCircle className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="telegramUsername"
+                      value={localSettings?.telegramUsername || ''}
+                      onChange={(e) => setLocalSettings({ ...localSettings!, telegramUsername: e.target.value })}
+                      className="pl-10 border-2 border-black focus:border-[#0A7A7A]"
+                      placeholder="@yourusername"
+                    />
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">This username will be shown to customers for direct contact during checkout</p>
+                </div>
+                <div>
                   <Label htmlFor="email" className="font-medium text-gray-900">
                     Contact Email
                   </Label>

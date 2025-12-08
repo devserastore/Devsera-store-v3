@@ -301,6 +301,7 @@ export const mockSettings: Settings = {
   upiId: 'devsera@paytm',
   qrCodeUrl: 'https://images.unsplash.com/photo-1526374965328-7f61d4dc18c5?w=300&q=80',
   telegramLink: 'https://t.me/devserasupport',
+  telegramUsername: '@karthik_nkn',
   contactEmail: 'support@devsera.store',
   contactPhone: '+91 98765 43210'
 };

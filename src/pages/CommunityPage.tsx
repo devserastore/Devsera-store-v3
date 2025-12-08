@@ -12,6 +12,7 @@ import { isSupabaseConfigured } from '@/lib/supabase';
 
 export function CommunityPage() {
   const [newPost, setNewPost] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
   const { posts: dbPosts, isLoading, createPost, likePost } = useCommunityPosts();
@@ -33,8 +34,9 @@ export function CommunityPage() {
   };
 
   const handleCreatePost = async () => {
-    if (!newPost.trim()) return;
+    if (!newPost.trim() || isSubmitting) return;
 
+    setIsSubmitting(true);
     try {
       if (isSupabaseConfigured) {
         await createPost(newPost);
@@ -50,6 +52,8 @@ export function CommunityPage() {
         description: error.message,
         variant: 'destructive',
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -101,7 +105,7 @@ export function CommunityPage() {
         </div>
 
         {/* Create Post */}
-        {user && (
+        {user ? (
           <div className="bg-white rounded-2xl border border-gray-200 p-6 mb-8 shadow-sm">
             <div className="flex items-start gap-4">
               <Avatar className="h-10 w-10 border-2 border-gray-100">
@@ -120,15 +124,26 @@ export function CommunityPage() {
                 <div className="flex justify-end">
                   <Button
                     onClick={handleCreatePost}
-                    disabled={!newPost.trim()}
+                    disabled={!newPost.trim() || isSubmitting}
                     className="rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-semibold shadow-lg shadow-teal-500/25"
                   >
                     <Send className="h-4 w-4 mr-2" />
-                    Post
+                    {isSubmitting ? 'Posting...' : 'Post'}
                   </Button>
                 </div>
               </div>
             </div>
+          </div>
+        ) : (
+          <div className="bg-gray-50 rounded-2xl border border-gray-200 p-6 mb-8 text-center">
+            <p className="text-gray-600 mb-3">Login to share your experience with the community</p>
+            <Button
+              onClick={() => window.location.href = '/login'}
+              variant="outline"
+              className="rounded-xl border-2 border-black"
+            >
+              Login to Post
+            </Button>
           </div>
         )}
 

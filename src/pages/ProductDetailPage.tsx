@@ -1,9 +1,14 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProduct } from '@/hooks/useProducts';
+import { useSettings } from '@/hooks/useSettings';
+import { useReviews } from '@/hooks/useReviews';
 import { mockProducts, mockReviews } from '@/data/mockData';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
-import { Check, Star, ShieldCheck, Clock, ArrowLeft, Key, Package, UserCheck, Zap, MessageCircle, Sparkles } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { Check, Star, ShieldCheck, Clock, ArrowLeft, Key, Package, UserCheck, Zap, MessageCircle, Sparkles, Send } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { DeliveryType } from '@/types';
@@ -40,11 +45,57 @@ export function ProductDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { toast } = useToast();
   const { product: dbProduct, isLoading } = useProduct(id!);
+  const { settings } = useSettings();
+  const { reviews: dbReviews, createReview, isLoading: reviewsLoading } = useReviews(id);
+  
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState('');
+  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
 
   // Use mock data if Supabase is not configured
   const product = isSupabaseConfigured && dbProduct ? dbProduct : mockProducts.find(p => p.id === id);
-  const productReviews = mockReviews.filter(r => r.productId === id);
+  const productReviews = isSupabaseConfigured && dbReviews.length > 0 ? dbReviews : mockReviews.filter(r => r.productId === id);
+
+  const handleSubmitReview = async () => {
+    if (!user) {
+      toast({
+        title: 'Login required',
+        description: 'Please login to submit a review',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (!reviewComment.trim()) {
+      toast({
+        title: 'Review required',
+        description: 'Please write a review comment',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsSubmittingReview(true);
+    try {
+      await createReview(reviewRating, reviewComment);
+      toast({
+        title: 'Review submitted!',
+        description: 'Thank you for your feedback',
+      });
+      setReviewComment('');
+      setReviewRating(5);
+    } catch (error: any) {
+      toast({
+        title: 'Error submitting review',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmittingReview(false);
+    }
+  };
 
   if (isLoading && isSupabaseConfigured) {
     return (
@@ -218,12 +269,12 @@ export function ProductDetailPage() {
                 <div>
                   <p className="text-sm text-gray-600">Have questions?</p>
                   <a
-                    href="https://t.me/karthik_nkn"
+                    href={`https://t.me/${(settings?.telegramUsername || '@karthik_nkn').replace('@', '')}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-[#0088cc] font-bold hover:underline"
                   >
-                    Contact @karthik_nkn on Telegram
+                    Contact {settings?.telegramUsername || '@karthik_nkn'} on Telegram
                   </a>
                 </div>
               </div>
@@ -269,9 +320,77 @@ export function ProductDetailPage() {
         </div>
 
         {/* Reviews */}
-        {productReviews.length > 0 && (
-          <div>
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">Customer Reviews</h2>
+        <div>
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-6">Customer Reviews</h2>
+          
+          {/* Write Review Form */}
+          {user && (
+            <div className="bg-white rounded-xl p-6 border border-gray-200 mb-6">
+              <h3 className="font-semibold text-gray-900 mb-4">Write a Review</h3>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Rating</label>
+                  <div className="flex items-center gap-1">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        type="button"
+                        onClick={() => setReviewRating(star)}
+                        className="focus:outline-none"
+                      >
+                        <Star
+                          className={`h-6 w-6 cursor-pointer transition-colors ${
+                            star <= reviewRating
+                              ? 'fill-amber-400 text-amber-400'
+                              : 'text-gray-300 hover:text-amber-300'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Your Review</label>
+                  <Textarea
+                    placeholder="Share your experience with this product..."
+                    value={reviewComment}
+                    onChange={(e) => setReviewComment(e.target.value)}
+                    className="border-2 border-gray-200 rounded-xl min-h-[100px] resize-none focus:border-teal-500"
+                  />
+                </div>
+                <Button
+                  onClick={handleSubmitReview}
+                  disabled={isSubmittingReview || !reviewComment.trim()}
+                  className="rounded-xl bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-semibold"
+                >
+                  {isSubmittingReview ? (
+                    'Submitting...'
+                  ) : (
+                    <>
+                      <Send className="h-4 w-4 mr-2" />
+                      Submit Review
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {!user && (
+            <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 mb-6 text-center">
+              <p className="text-gray-600 mb-3">Login to write a review</p>
+              <Button
+                onClick={() => navigate('/login')}
+                variant="outline"
+                className="rounded-xl border-2 border-black"
+              >
+                Login
+              </Button>
+            </div>
+          )}
+
+          {/* Reviews List */}
+          {productReviews.length > 0 ? (
             <div className="space-y-4">
               {productReviews.map(review => (
                 <div key={review.id} className="bg-white rounded-xl p-6 border border-gray-200 hover:shadow-md transition-all">
@@ -315,8 +434,13 @@ export function ProductDetailPage() {
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="bg-gray-50 rounded-xl p-8 text-center">
+              <Star className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500">No reviews yet. Be the first to review!</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { User, ShoppingBag, LayoutDashboard, LogOut, Menu, X, ChevronDown } from 'lucide-react';
+import { User, ShoppingBag, LayoutDashboard, LogOut, Menu, X, ChevronDown, Package, Phone, Ticket } from 'lucide-react';
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from '@/components/ui/sheet';
 
 export function Header() {
@@ -48,11 +48,35 @@ export function Header() {
         Products
       </Link>
       <Link 
+        to="/bundles" 
+        onClick={() => setIsOpen(false)}
+        className={`font-semibold transition-colors hover:text-primary flex items-center gap-1 ${mobile ? 'text-base py-2' : 'text-sm'}`}
+      >
+        <Package className="h-4 w-4" />
+        Bundles
+      </Link>
+      <Link 
         to="/community" 
         onClick={() => setIsOpen(false)}
         className={`font-semibold transition-colors hover:text-primary ${mobile ? 'text-base py-2' : 'text-sm'}`}
       >
         Community
+      </Link>
+      <Link 
+        to="/contact" 
+        onClick={() => setIsOpen(false)}
+        className={`font-semibold transition-colors hover:text-primary flex items-center gap-1 ${mobile ? 'text-base py-2' : 'text-sm'}`}
+      >
+        <Phone className="h-4 w-4" />
+        Contact
+      </Link>
+      <Link 
+        to="/support" 
+        onClick={() => setIsOpen(false)}
+        className={`font-semibold transition-colors hover:text-primary flex items-center gap-1 ${mobile ? 'text-base py-2' : 'text-sm'}`}
+      >
+        <Ticket className="h-4 w-4" />
+        Support
       </Link>
       {user && (
         <Link 
