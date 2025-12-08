@@ -199,6 +199,11 @@ export function useAdminOrders() {
             userInputLabel: o.product.user_input_label,
             isActive: o.product.is_active,
           } : undefined,
+          profile: o.profile ? {
+            id: o.profile.id,
+            email: o.profile.email,
+            full_name: o.profile.full_name,
+          } : undefined,
         }))
       );
     } catch (err) {

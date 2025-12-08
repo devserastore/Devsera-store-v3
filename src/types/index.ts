@@ -31,6 +31,7 @@ export interface OrderCredentials {
   // For COUPON_CODE / INSTANT_KEY type
   couponCode?: string;
   licenseKey?: string;
+  activationLink?: string; // Clickable link for coupon/license activation
   // For MANUAL_ACTIVATION type
   activationStatus?: string;
   activationNotes?: string;
@@ -44,11 +45,18 @@ export interface UserProvidedCredentials {
   password?: string;
 }
 
+export interface OrderProfile {
+  id: string;
+  email: string;
+  full_name?: string;
+}
+
 export interface Order {
   id: string;
   userId: string;
   productId: string;
   product?: Product;
+  profile?: OrderProfile;
   status: OrderStatus;
   paymentScreenshot?: string;
   // User-provided input for MANUAL_ACTIVATION (legacy - single string)
