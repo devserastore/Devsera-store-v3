@@ -7,6 +7,36 @@ export type DeliveryType =
   | 'MANUAL_ACTIVATION' // User provides their ID/email, admin activates on their account
   | 'INSTANT_KEY';     // Pre-loaded keys that auto-deliver
 
+export interface ProductVariant {
+  id: string;
+  productId: string;
+  name: string;
+  duration: string;
+  originalPrice: number;
+  salePrice: number;
+  stockCount: number;
+  isDefault: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProductStockKey {
+  id: string;
+  productId: string;
+  variantId?: string;
+  keyType: 'LICENSE_KEY' | 'CREDENTIALS' | 'COUPON_CODE';
+  keyValue: string;
+  username?: string;
+  password?: string;
+  additionalData?: Record<string, any>;
+  status: 'AVAILABLE' | 'ASSIGNED' | 'EXPIRED' | 'REVOKED';
+  assignedOrderId?: string;
+  expiryDate?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -22,6 +52,13 @@ export interface Product {
   requiresUserInput?: boolean;   // If true, user must provide their account details
   userInputLabel?: string;       // Label for user input field (e.g., "Your Netflix Email")
   isActive?: boolean;
+  // New fields for variants and scheduling
+  hasVariants?: boolean;
+  variants?: ProductVariant[];
+  scheduledStart?: string;
+  scheduledEnd?: string;
+  lowStockAlert?: number;
+  stockCount?: number; // Computed from stock keys
 }
 
 export interface OrderCredentials {
@@ -55,6 +92,8 @@ export interface Order {
   id: string;
   userId: string;
   productId: string;
+  variantId?: string;
+  variant?: ProductVariant;
   product?: Product;
   profile?: OrderProfile;
   status: OrderStatus;

@@ -320,6 +320,7 @@ export type Database = {
           updated_at: string
           user_id: string
           user_provided_input: string | null
+          variant_id: string | null
         }
         Insert: {
           cancellation_reason?: string | null
@@ -333,6 +334,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           user_provided_input?: string | null
+          variant_id?: string | null
         }
         Update: {
           cancellation_reason?: string | null
@@ -346,6 +348,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           user_provided_input?: string | null
+          variant_id?: string | null
         }
         Relationships: [
           {
@@ -360,6 +363,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
             referencedColumns: ["id"]
           },
         ]
@@ -409,6 +419,126 @@ export type Database = {
           },
         ]
       }
+      product_stock_keys: {
+        Row: {
+          additional_data: Json | null
+          assigned_order_id: string | null
+          created_at: string | null
+          expiry_date: string | null
+          id: string
+          key_type: string
+          key_value: string
+          password: string | null
+          product_id: string
+          status: string
+          updated_at: string | null
+          username: string | null
+          variant_id: string | null
+        }
+        Insert: {
+          additional_data?: Json | null
+          assigned_order_id?: string | null
+          created_at?: string | null
+          expiry_date?: string | null
+          id?: string
+          key_type?: string
+          key_value: string
+          password?: string | null
+          product_id: string
+          status?: string
+          updated_at?: string | null
+          username?: string | null
+          variant_id?: string | null
+        }
+        Update: {
+          additional_data?: Json | null
+          assigned_order_id?: string | null
+          created_at?: string | null
+          expiry_date?: string | null
+          id?: string
+          key_type?: string
+          key_value?: string
+          password?: string | null
+          product_id?: string
+          status?: string
+          updated_at?: string | null
+          username?: string | null
+          variant_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_stock_keys_assigned_order_id_fkey"
+            columns: ["assigned_order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_stock_keys_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_stock_keys_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_variants: {
+        Row: {
+          created_at: string | null
+          duration: string
+          id: string
+          is_default: boolean | null
+          name: string
+          original_price: number
+          product_id: string
+          sale_price: number
+          sort_order: number | null
+          stock_count: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          duration: string
+          id?: string
+          is_default?: boolean | null
+          name: string
+          original_price: number
+          product_id: string
+          sale_price: number
+          sort_order?: number | null
+          stock_count?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          duration?: string
+          id?: string
+          is_default?: boolean | null
+          name?: string
+          original_price?: number
+          product_id?: string
+          sale_price?: number
+          sort_order?: number | null
+          stock_count?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       products: {
         Row: {
           category: string
@@ -418,13 +548,17 @@ export type Database = {
           description: string
           duration: string
           features: string[]
+          has_variants: boolean | null
           id: string
           image: string
           is_active: boolean | null
+          low_stock_alert: number | null
           name: string
           original_price: number
           requires_user_input: boolean | null
           sale_price: number
+          scheduled_end: string | null
+          scheduled_start: string | null
           updated_at: string
           user_input_label: string | null
         }
@@ -436,13 +570,17 @@ export type Database = {
           description: string
           duration: string
           features: string[]
+          has_variants?: boolean | null
           id?: string
           image: string
           is_active?: boolean | null
+          low_stock_alert?: number | null
           name: string
           original_price: number
           requires_user_input?: boolean | null
           sale_price: number
+          scheduled_end?: string | null
+          scheduled_start?: string | null
           updated_at?: string
           user_input_label?: string | null
         }
@@ -454,13 +592,17 @@ export type Database = {
           description?: string
           duration?: string
           features?: string[]
+          has_variants?: boolean | null
           id?: string
           image?: string
           is_active?: boolean | null
+          low_stock_alert?: number | null
           name?: string
           original_price?: number
           requires_user_input?: boolean | null
           sale_price?: number
+          scheduled_end?: string | null
+          scheduled_start?: string | null
           updated_at?: string
           user_input_label?: string | null
         }
@@ -757,6 +899,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_stock_key_to_order: {
+        Args: {
+          p_order_id: string
+          p_product_id: string
+          p_variant_id?: string
+        }
+        Returns: string
+      }
+      get_product_stock_count: {
+        Args: { p_product_id: string; p_variant_id?: string }
+        Returns: number
+      }
       promote_to_admin: { Args: { user_email: string }; Returns: undefined }
     }
     Enums: {

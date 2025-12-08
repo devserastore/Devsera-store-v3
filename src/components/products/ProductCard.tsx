@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { useWishlist } from '@/contexts/WishlistContext';
-import { Clock, Key, Package, UserCheck, Zap, ArrowRight, Heart, Eye, Star, AlertTriangle } from 'lucide-react';
+import { Clock, Key, Package, UserCheck, Zap, ArrowRight, Heart, Eye, Star, AlertTriangle, Layers } from 'lucide-react';
 
 const deliveryIcons: Record<DeliveryType, React.ReactNode> = {
   CREDENTIALS: <Key className="h-3 w-3" />,
@@ -30,14 +30,25 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
   const { isInWishlist, toggleWishlist } = useWishlist();
   const [isHovered, setIsHovered] = useState(false);
   
-  const salePrice = product.salePrice || 0;
-  const originalPrice = product.originalPrice || 0;
+  // Get price range for products with variants
+  const hasVariants = product.hasVariants && product.variants && product.variants.length > 0;
+  const minPrice = hasVariants 
+    ? Math.min(...product.variants!.map(v => v.salePrice))
+    : product.salePrice || 0;
+  const maxPrice = hasVariants 
+    ? Math.max(...product.variants!.map(v => v.salePrice))
+    : product.salePrice || 0;
+  
+  const salePrice = minPrice;
+  const originalPrice = hasVariants 
+    ? Math.min(...product.variants!.map(v => v.originalPrice))
+    : (product.originalPrice || 0);
   const savings = originalPrice - salePrice;
   const discountPercent = originalPrice > 0 ? Math.round((savings / originalPrice) * 100) : 0;
   
   // Simulated stock (in real app, this would come from product data)
-  const stockLevel = Math.floor(Math.random() * 20) + 1;
-  const isLowStock = stockLevel <= 5;
+  const stockLevel = product.stockCount !== undefined ? product.stockCount : Math.floor(Math.random() * 20) + 1;
+  const isLowStock = product.deliveryType === 'INSTANT_KEY' && stockLevel <= 5;
   
   // Simulated rating
   const rating = 4.5 + Math.random() * 0.5;
@@ -151,20 +162,33 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
         <div className="flex items-end justify-between pt-2 border-t border-gray-100 dark:border-gray-700">
           <div>
             <div className="flex items-baseline gap-2">
-              <span className="text-2xl font-bold text-gray-900 dark:text-white">
-                ₹{salePrice.toLocaleString()}
-              </span>
-              {originalPrice > salePrice && (
-                <span className="text-sm text-gray-400 line-through">
-                  ₹{originalPrice.toLocaleString()}
+              {hasVariants && minPrice !== maxPrice ? (
+                <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                  ₹{minPrice.toLocaleString()} - ₹{maxPrice.toLocaleString()}
                 </span>
+              ) : (
+                <>
+                  <span className="text-2xl font-bold text-gray-900 dark:text-white">
+                    ₹{salePrice.toLocaleString()}
+                  </span>
+                  {originalPrice > salePrice && (
+                    <span className="text-sm text-gray-400 line-through">
+                      ₹{originalPrice.toLocaleString()}
+                    </span>
+                  )}
+                </>
               )}
             </div>
-            {savings > 0 && (
+            {hasVariants ? (
+              <p className="text-xs font-medium text-purple-600 mt-0.5 flex items-center gap-1">
+                <Layers className="h-3 w-3" />
+                {product.variants!.length} plans available
+              </p>
+            ) : savings > 0 ? (
               <p className="text-xs font-semibold text-emerald-600 mt-0.5">
                 Save ₹{savings.toLocaleString()}
               </p>
-            )}
+            ) : null}
           </div>
           <Button
             onClick={() => navigate(`/product/${product.id}`)}

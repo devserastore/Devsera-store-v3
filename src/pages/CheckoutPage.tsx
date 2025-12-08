@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { useProduct } from '@/hooks/useProducts';
 import { useOrders } from '@/hooks/useOrders';
 import { useSettings } from '@/hooks/useSettings';
@@ -9,10 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { Copy, Upload, CheckCircle2, ArrowLeft, Info, Key, Package, UserCheck, Zap, Ticket, X, Clock } from 'lucide-react';
+import { Copy, Upload, CheckCircle2, ArrowLeft, Info, Key, Package, UserCheck, Zap, Ticket, X, Clock, Layers } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { DeliveryType } from '@/types';
+import { DeliveryType, ProductVariant } from '@/types';
 
 const deliveryTypeInfo: Record<DeliveryType, { icon: React.ReactNode; color: string }> = {
   CREDENTIALS: { icon: <Key className="h-5 w-5" />, color: 'text-blue-600' },
@@ -24,6 +24,7 @@ const deliveryTypeInfo: Record<DeliveryType, { icon: React.ReactNode; color: str
 export function CheckoutPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const [screenshot, setScreenshot] = useState<File | null>(null);
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -31,6 +32,9 @@ export function CheckoutPage() {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [userInput, setUserInput] = useState('');
   const [userPassword, setUserPassword] = useState('');
+  
+  // Variant selection
+  const [selectedVariantId, setSelectedVariantId] = useState<string | null>(searchParams.get('variant'));
 
   const { product: dbProduct, isLoading: productLoading } = useProduct(id!);
   const { settings: dbSettings, isLoading: settingsLoading } = useSettings();
@@ -41,6 +45,16 @@ export function CheckoutPage() {
   const product = dbProduct || (!isSupabaseConfigured ? mockProducts.find(p => p.id === id) : null);
   const settings = dbSettings || (!isSupabaseConfigured ? mockSettings : null);
   
+  // Get selected variant
+  const selectedVariant = product?.hasVariants && product.variants 
+    ? product.variants.find(v => v.id === selectedVariantId) || product.variants.find(v => v.isDefault) || product.variants[0]
+    : null;
+  
+  // Calculate effective price based on variant or product
+  const effectivePrice = selectedVariant ? selectedVariant.salePrice : (product?.salePrice || 0);
+  const effectiveOriginalPrice = selectedVariant ? selectedVariant.originalPrice : (product?.originalPrice || 0);
+  const effectiveDuration = selectedVariant ? selectedVariant.duration : (product?.duration || '');
+  
   // Coupon state
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<{ id: string; discountAmount: number } | null>(null);
@@ -50,6 +64,16 @@ export function CheckoutPage() {
   useEffect(() => {
     console.log('Settings loaded:', { dbSettings, settings, isSupabaseConfigured });
   }, [dbSettings, settings]);
+
+  // Set default variant when product loads
+  useEffect(() => {
+    if (product?.hasVariants && product.variants && !selectedVariantId) {
+      const defaultVariant = product.variants.find(v => v.isDefault) || product.variants[0];
+      if (defaultVariant) {
+        setSelectedVariantId(defaultVariant.id);
+      }
+    }
+  }, [product, selectedVariantId]);
 
   const orderCreatedRef = useRef(false);
   const [orderCreationAttempted, setOrderCreationAttempted] = useState(false);
@@ -137,11 +161,11 @@ export function CheckoutPage() {
       // Create order first if not already created
       let currentOrderId = orderId;
       const finalPrice = appliedCoupon 
-        ? Math.max(0, (product?.salePrice || 0) - appliedCoupon.discountAmount)
-        : product?.salePrice;
+        ? Math.max(0, effectivePrice - appliedCoupon.discountAmount)
+        : effectivePrice;
         
       if (!currentOrderId && product && isSupabaseConfigured) {
-        const order = await createOrder(product.id, undefined, finalPrice);
+        const order = await createOrder(product.id, selectedVariant?.id, finalPrice);
         currentOrderId = order.id;
         setOrderId(order.id);
         
@@ -230,19 +254,66 @@ export function CheckoutPage() {
                 />
                 <div className="flex-1">
                   <h3 className="font-bold text-gray-900 text-lg">{product.name}</h3>
-                  <p className="text-sm text-gray-500">{product.duration}</p>
+                  <p className="text-sm text-gray-500">{effectiveDuration}</p>
                   <div className="mt-2">
-                    {product.originalPrice > product.salePrice && (
+                    {effectiveOriginalPrice > effectivePrice && (
                       <span className="line-through text-gray-400 text-sm mr-2">
-                        ₹{(product.originalPrice || 0).toLocaleString()}
+                        ₹{effectiveOriginalPrice.toLocaleString()}
                       </span>
                     )}
                     <span className="text-2xl font-bold text-[#0A7A7A]">
-                      ₹{(product.salePrice || 0).toLocaleString()}
+                      ₹{effectivePrice.toLocaleString()}
                     </span>
                   </div>
                 </div>
               </div>
+
+              {/* Variant Selection */}
+              {product.hasVariants && product.variants && product.variants.length > 1 && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <Label className="font-semibold text-gray-900 flex items-center gap-2 mb-3">
+                    <Layers className="h-4 w-4 text-purple-600" />
+                    Select Plan
+                  </Label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {product.variants.map((variant) => (
+                      <button
+                        key={variant.id}
+                        onClick={() => setSelectedVariantId(variant.id)}
+                        className={`p-3 rounded-xl border-2 text-left transition-all ${
+                          selectedVariantId === variant.id
+                            ? 'border-[#0A7A7A] bg-teal-50 shadow-md'
+                            : 'border-gray-200 hover:border-gray-300 bg-white'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-semibold text-gray-900 text-sm">
+                              {variant.name || variant.duration}
+                            </p>
+                            <p className="text-xs text-gray-500">{variant.duration}</p>
+                          </div>
+                          <div className="text-right">
+                            {variant.originalPrice > variant.salePrice && (
+                              <p className="text-xs text-gray-400 line-through">
+                                ₹{variant.originalPrice.toLocaleString()}
+                              </p>
+                            )}
+                            <p className={`font-bold ${selectedVariantId === variant.id ? 'text-[#0A7A7A]' : 'text-gray-900'}`}>
+                              ₹{variant.salePrice.toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                        {variant.isDefault && (
+                          <span className="inline-block mt-1 text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                            Popular
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Coupon Code Section */}
@@ -307,7 +378,7 @@ export function CheckoutPage() {
               <div className="bg-green-50 rounded-2xl border-2 border-green-200 p-4">
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600">Original Price:</span>
-                  <span className="text-gray-500 line-through">₹{(product.salePrice || 0).toLocaleString()}</span>
+                  <span className="text-gray-500 line-through">₹{effectivePrice.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between items-center text-green-600">
                   <span>Coupon Discount:</span>
@@ -316,7 +387,7 @@ export function CheckoutPage() {
                 <div className="flex justify-between items-center mt-2 pt-2 border-t border-green-200">
                   <span className="font-bold text-gray-900">Final Price:</span>
                   <span className="text-2xl font-bold text-green-600">
-                    ₹{Math.max(0, (product.salePrice || 0) - appliedCoupon.discountAmount).toLocaleString()}
+                    ₹{Math.max(0, effectivePrice - appliedCoupon.discountAmount).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -554,8 +625,8 @@ export function CheckoutPage() {
                 <>
                   <CheckCircle2 className="h-5 w-5 mr-2" />
                   Place Order - ₹{appliedCoupon 
-                    ? Math.max(0, (product.salePrice || 0) - appliedCoupon.discountAmount).toLocaleString()
-                    : (product.salePrice || 0).toLocaleString()
+                    ? Math.max(0, effectivePrice - appliedCoupon.discountAmount).toLocaleString()
+                    : effectivePrice.toLocaleString()
                   }
                 </>
               )}
