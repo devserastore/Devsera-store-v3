@@ -5,13 +5,19 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Zap, Clock, ArrowRight, Flame } from 'lucide-react';
 
+interface FlashSaleProduct {
+  productId: string;
+  discountAmount: number;
+}
+
 interface FlashSaleConfig {
   enabled: boolean;
   duration_hours: number;
   min_discount_percent: number;
   max_products: number;
   product_ids: string[];
-  start_time?: string;
+  flash_sale_products: FlashSaleProduct[];
+  end_time?: string;
 }
 
 interface FlashSalesProps {
@@ -26,56 +32,67 @@ export function FlashSales({ products }: FlashSalesProps) {
     seconds: 0
   });
   const [config, setConfig] = useState<FlashSaleConfig | null>(null);
+  const [isExpired, setIsExpired] = useState(false);
 
   // Load config from localStorage
   useEffect(() => {
-    const savedConfig = localStorage.getItem('flashSaleConfig');
-    if (savedConfig) {
-      const parsed = JSON.parse(savedConfig);
-      setConfig(parsed);
-      
-      // Initialize or get start time
-      let startTime = localStorage.getItem('flashSaleStartTime');
-      if (!startTime) {
-        startTime = new Date().toISOString();
-        localStorage.setItem('flashSaleStartTime', startTime);
+    const loadConfig = () => {
+      const savedConfig = localStorage.getItem('flashSaleConfig');
+      if (savedConfig) {
+        const parsed = JSON.parse(savedConfig);
+        setConfig(parsed);
+        
+        // Check if flash sale has expired
+        if (parsed.end_time) {
+          const endTime = new Date(parsed.end_time).getTime();
+          const now = Date.now();
+          if (now >= endTime) {
+            setIsExpired(true);
+          } else {
+            setIsExpired(false);
+          }
+        }
       }
-    }
+    };
+    
+    loadConfig();
+    // Re-check config every second to catch expiration
+    const configInterval = setInterval(loadConfig, 1000);
+    return () => clearInterval(configInterval);
   }, []);
 
-  // Get flash sale products based on config
-  const flashProducts = config?.enabled && config?.product_ids?.length > 0
-    ? products.filter(p => config.product_ids.includes(p.id))
-    : products
-        .filter(p => p.originalPrice > p.salePrice)
-        .sort((a, b) => {
-          const discountA = ((a.originalPrice - a.salePrice) / a.originalPrice) * 100;
-          const discountB = ((b.originalPrice - b.salePrice) / b.originalPrice) * 100;
-          return discountB - discountA;
-        })
-        .slice(0, 3);
+  // Get flash sale products with their discounts
+  const getFlashSaleProducts = () => {
+    if (!config?.enabled || isExpired || !config?.flash_sale_products?.length) {
+      return [];
+    }
+    
+    return config.flash_sale_products
+      .map(fp => {
+        const product = products.find(p => p.id === fp.productId);
+        if (!product) return null;
+        return {
+          ...product,
+          flashDiscountAmount: fp.discountAmount,
+          flashSalePrice: Math.max(0, product.salePrice - fp.discountAmount)
+        };
+      })
+      .filter(Boolean) as (Product & { flashDiscountAmount: number; flashSalePrice: number })[];
+  };
+
+  const flashProducts = getFlashSaleProducts();
 
   useEffect(() => {
-    const durationHours = config?.duration_hours || 6;
+    if (!config?.end_time) return;
     
     const calculateTimeLeft = () => {
-      const startTimeStr = localStorage.getItem('flashSaleStartTime');
-      if (!startTimeStr) {
-        const now = new Date().toISOString();
-        localStorage.setItem('flashSaleStartTime', now);
-        return { hours: durationHours, minutes: 0, seconds: 0 };
-      }
-      
-      const startTime = new Date(startTimeStr).getTime();
-      const endTime = startTime + (durationHours * 60 * 60 * 1000);
+      const endTime = new Date(config.end_time!).getTime();
       const now = Date.now();
       const diff = endTime - now;
       
       if (diff <= 0) {
-        // Reset the timer
-        const newStartTime = new Date().toISOString();
-        localStorage.setItem('flashSaleStartTime', newStartTime);
-        return { hours: durationHours, minutes: 0, seconds: 0 };
+        setIsExpired(true);
+        return { hours: 0, minutes: 0, seconds: 0 };
       }
       
       const hours = Math.floor(diff / (1000 * 60 * 60));
@@ -88,13 +105,20 @@ export function FlashSales({ products }: FlashSalesProps) {
     setTimeLeft(calculateTimeLeft());
 
     const timer = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
+      const newTimeLeft = calculateTimeLeft();
+      setTimeLeft(newTimeLeft);
+      
+      // Check if just expired
+      if (newTimeLeft.hours === 0 && newTimeLeft.minutes === 0 && newTimeLeft.seconds === 0) {
+        setIsExpired(true);
+      }
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [config]);
+  }, [config?.end_time]);
 
-  if (flashProducts.length === 0 || (config && !config.enabled)) return null;
+  // Don't show if no products, disabled, or expired
+  if (flashProducts.length === 0 || !config?.enabled || isExpired) return null;
 
   return (
     <section className="container mx-auto px-4 py-8">
@@ -151,7 +175,6 @@ export function FlashSales({ products }: FlashSalesProps) {
           {/* Flash Products */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {flashProducts.map((product) => {
-              const discount = Math.round(((product.originalPrice - product.salePrice) / product.originalPrice) * 100);
               return (
                 <div
                   key={product.id}
@@ -165,11 +188,13 @@ export function FlashSales({ products }: FlashSalesProps) {
                       className="w-20 h-20 object-cover rounded-xl"
                     />
                     <div className="flex-1 min-w-0">
-                      <Badge className="bg-red-500 text-white mb-1">-{discount}% OFF</Badge>
+                      <Badge className="bg-red-500 text-white mb-1">
+                        SAVE ₹{product.flashDiscountAmount}
+                      </Badge>
                       <h3 className="font-bold text-gray-900 dark:text-white truncate">{product.name}</h3>
                       <div className="flex items-baseline gap-2 mt-1">
-                        <span className="text-xl font-bold text-red-600 dark:text-red-400">₹{product.salePrice}</span>
-                        <span className="text-sm text-gray-400 line-through">₹{product.originalPrice}</span>
+                        <span className="text-xl font-bold text-red-600 dark:text-red-400">₹{product.flashSalePrice}</span>
+                        <span className="text-sm text-gray-400 line-through">₹{product.salePrice}</span>
                       </div>
                     </div>
                   </div>

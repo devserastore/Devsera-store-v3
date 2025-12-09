@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useProduct } from '@/hooks/useProducts';
 import { useSettings } from '@/hooks/useSettings';
@@ -8,11 +8,44 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/components/ui/use-toast';
-import { Check, Star, ShieldCheck, Clock, ArrowLeft, Key, Package, UserCheck, Zap, MessageCircle, Sparkles, Send, Layers } from 'lucide-react';
+import { Check, Star, ShieldCheck, Clock, ArrowLeft, Key, Package, UserCheck, Zap, MessageCircle, Sparkles, Send, Layers, Flame } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { DeliveryType, ProductVariant } from '@/types';
 import { Badge } from '@/components/ui/badge';
+
+interface FlashSaleProduct {
+  productId: string;
+  discountAmount: number;
+}
+
+interface FlashSaleConfig {
+  enabled: boolean;
+  flash_sale_products: FlashSaleProduct[];
+  end_time?: string;
+}
+
+// Helper to get flash sale info for a product
+function getFlashSaleInfo(productId: string): { isOnFlashSale: boolean; discountAmount: number } {
+  try {
+    const savedConfig = localStorage.getItem('flashSaleConfig');
+    if (!savedConfig) return { isOnFlashSale: false, discountAmount: 0 };
+    
+    const config: FlashSaleConfig = JSON.parse(savedConfig);
+    
+    if (!config.enabled || !config.end_time) return { isOnFlashSale: false, discountAmount: 0 };
+    
+    const endTime = new Date(config.end_time).getTime();
+    if (Date.now() >= endTime) return { isOnFlashSale: false, discountAmount: 0 };
+    
+    const flashProduct = config.flash_sale_products?.find(fp => fp.productId === productId);
+    if (!flashProduct) return { isOnFlashSale: false, discountAmount: 0 };
+    
+    return { isOnFlashSale: true, discountAmount: flashProduct.discountAmount };
+  } catch {
+    return { isOnFlashSale: false, discountAmount: 0 };
+  }
+}
 
 const deliveryTypeInfo: Record<DeliveryType, { label: string; icon: React.ReactNode; description: string; color: string }> = {
   CREDENTIALS: {
@@ -54,10 +87,22 @@ export function ProductDetailPage() {
   const [reviewComment, setReviewComment] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(null);
+  const [flashSaleInfo, setFlashSaleInfo] = useState({ isOnFlashSale: false, discountAmount: 0 });
 
   // Use mock data if Supabase is not configured
   const product = isSupabaseConfigured && dbProduct ? dbProduct : mockProducts.find(p => p.id === id);
   const productReviews = isSupabaseConfigured && dbReviews.length > 0 ? dbReviews : mockReviews.filter(r => r.productId === id);
+
+  // Check flash sale status
+  useEffect(() => {
+    if (!id) return;
+    const checkFlashSale = () => {
+      setFlashSaleInfo(getFlashSaleInfo(id));
+    };
+    checkFlashSale();
+    const interval = setInterval(checkFlashSale, 1000);
+    return () => clearInterval(interval);
+  }, [id]);
 
   const handleSubmitReview = async () => {
     if (!user) {
@@ -143,11 +188,18 @@ export function ProductDetailPage() {
     : null;
   
   // Calculate effective prices based on variant
-  const salePrice = selectedVariant ? selectedVariant.salePrice : (product?.salePrice || 0);
+  const baseSalePrice = selectedVariant ? selectedVariant.salePrice : (product?.salePrice || 0);
   const originalPrice = selectedVariant ? selectedVariant.originalPrice : (product?.originalPrice || 0);
+  
+  // Apply flash sale discount
+  const salePrice = flashSaleInfo.isOnFlashSale 
+    ? Math.max(0, baseSalePrice - flashSaleInfo.discountAmount)
+    : baseSalePrice;
+  
   const effectiveDuration = selectedVariant ? selectedVariant.duration : product?.duration;
-  const savings = originalPrice - salePrice;
-  const discountPercent = originalPrice > 0 ? Math.round((savings / originalPrice) * 100) : 0;
+  const displayOriginalPrice = flashSaleInfo.isOnFlashSale ? baseSalePrice : originalPrice;
+  const savings = displayOriginalPrice - salePrice;
+  const discountPercent = displayOriginalPrice > 0 ? Math.round((savings / displayOriginalPrice) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 pb-20 md:pb-0">
@@ -178,7 +230,14 @@ export function ProductDetailPage() {
               />
             </div>
             {/* Discount Badge */}
-            {discountPercent > 0 && (
+            {flashSaleInfo.isOnFlashSale ? (
+              <div className="absolute top-4 right-4">
+                <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-bold bg-gradient-to-r from-red-600 to-orange-500 text-white shadow-lg animate-pulse">
+                  <Flame className="h-4 w-4 mr-1" />
+                  FLASH SALE -₹{flashSaleInfo.discountAmount}
+                </span>
+              </div>
+            ) : discountPercent > 0 && (
               <div className="absolute top-4 right-4">
                 <span className="inline-flex items-center px-4 py-2 rounded-full text-sm font-bold bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg">
                   -{discountPercent}% OFF
@@ -219,13 +278,18 @@ export function ProductDetailPage() {
                 <span className="text-4xl md:text-5xl font-extrabold text-gray-900 dark:text-white">
                   ₹{salePrice.toLocaleString()}
                 </span>
-                {originalPrice > salePrice && (
+                {displayOriginalPrice > salePrice && (
                   <span className="text-xl text-gray-400 line-through">
-                    ₹{originalPrice.toLocaleString()}
+                    ₹{displayOriginalPrice.toLocaleString()}
                   </span>
                 )}
               </div>
-              {savings > 0 && (
+              {flashSaleInfo.isOnFlashSale ? (
+                <p className="text-lg font-semibold text-red-600 dark:text-red-400 flex items-center gap-2">
+                  <Flame className="h-5 w-5" />
+                  Flash Sale - Save ₹{flashSaleInfo.discountAmount}!
+                </p>
+              ) : savings > 0 && (
                 <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400">
                   Save ₹{savings.toLocaleString()} ({discountPercent}% OFF)
                 </p>
