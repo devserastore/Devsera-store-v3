@@ -1,10 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Product, DeliveryType } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { useWishlist } from '@/contexts/WishlistContext';
-import { Clock, Key, Package, UserCheck, Zap, ArrowRight, Heart, Eye, Star, AlertTriangle, Layers } from 'lucide-react';
+import { Clock, Key, Package, UserCheck, Zap, ArrowRight, Heart, Eye, Star, AlertTriangle, Layers, Flame } from 'lucide-react';
+
+interface FlashSaleProduct {
+  productId: string;
+  discountAmount: number;
+}
+
+interface FlashSaleConfig {
+  enabled: boolean;
+  flash_sale_products: FlashSaleProduct[];
+  end_time?: string;
+}
 
 const deliveryIcons: Record<DeliveryType, React.ReactNode> = {
   CREDENTIALS: <Key className="h-3 w-3" />,
@@ -20,6 +31,30 @@ const deliveryLabels: Record<DeliveryType, string> = {
   INSTANT_KEY: 'Instant Key'
 };
 
+// Helper to get flash sale info for a product
+function getFlashSaleInfo(productId: string): { isOnFlashSale: boolean; discountAmount: number } {
+  try {
+    const savedConfig = localStorage.getItem('flashSaleConfig');
+    if (!savedConfig) return { isOnFlashSale: false, discountAmount: 0 };
+    
+    const config: FlashSaleConfig = JSON.parse(savedConfig);
+    
+    // Check if flash sale is enabled and not expired
+    if (!config.enabled || !config.end_time) return { isOnFlashSale: false, discountAmount: 0 };
+    
+    const endTime = new Date(config.end_time).getTime();
+    if (Date.now() >= endTime) return { isOnFlashSale: false, discountAmount: 0 };
+    
+    // Find the product in flash sale
+    const flashProduct = config.flash_sale_products?.find(fp => fp.productId === productId);
+    if (!flashProduct) return { isOnFlashSale: false, discountAmount: 0 };
+    
+    return { isOnFlashSale: true, discountAmount: flashProduct.discountAmount };
+  } catch {
+    return { isOnFlashSale: false, discountAmount: 0 };
+  }
+}
+
 interface ProductCardProps {
   product: Product;
   onQuickView?: (product: Product) => void;
@@ -29,22 +64,44 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
   const navigate = useNavigate();
   const { isInWishlist, toggleWishlist } = useWishlist();
   const [isHovered, setIsHovered] = useState(false);
+  const [flashSaleInfo, setFlashSaleInfo] = useState({ isOnFlashSale: false, discountAmount: 0 });
+  
+  // Check flash sale status
+  useEffect(() => {
+    const checkFlashSale = () => {
+      setFlashSaleInfo(getFlashSaleInfo(product.id));
+    };
+    checkFlashSale();
+    const interval = setInterval(checkFlashSale, 1000);
+    return () => clearInterval(interval);
+  }, [product.id]);
   
   // Get price range for products with variants
   const hasVariants = product.hasVariants && product.variants && product.variants.length > 0;
-  const minPrice = hasVariants 
+  const baseMinPrice = hasVariants 
     ? Math.min(...product.variants!.map(v => v.salePrice))
     : product.salePrice || 0;
-  const maxPrice = hasVariants 
+  const baseMaxPrice = hasVariants 
     ? Math.max(...product.variants!.map(v => v.salePrice))
     : product.salePrice || 0;
+  
+  // Apply flash sale discount
+  const minPrice = flashSaleInfo.isOnFlashSale 
+    ? Math.max(0, baseMinPrice - flashSaleInfo.discountAmount)
+    : baseMinPrice;
+  const maxPrice = flashSaleInfo.isOnFlashSale 
+    ? Math.max(0, baseMaxPrice - flashSaleInfo.discountAmount)
+    : baseMaxPrice;
   
   const salePrice = minPrice;
   const originalPrice = hasVariants 
     ? Math.min(...product.variants!.map(v => v.originalPrice))
     : (product.originalPrice || 0);
-  const savings = originalPrice - salePrice;
-  const discountPercent = originalPrice > 0 ? Math.round((savings / originalPrice) * 100) : 0;
+  
+  // For flash sale, show the base price as "original" for comparison
+  const displayOriginalPrice = flashSaleInfo.isOnFlashSale ? baseMinPrice : originalPrice;
+  const savings = displayOriginalPrice - salePrice;
+  const discountPercent = displayOriginalPrice > 0 ? Math.round((savings / displayOriginalPrice) * 100) : 0;
   
   // Simulated stock (in real app, this would come from product data)
   const stockLevel = product.stockCount !== undefined ? product.stockCount : Math.floor(Math.random() * 20) + 1;
@@ -60,7 +117,14 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* Discount Badge */}
-      {discountPercent > 0 && (
+      {flashSaleInfo.isOnFlashSale ? (
+        <div className="absolute top-4 left-4 z-10">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-red-600 to-orange-500 text-white shadow-lg animate-pulse">
+            <Flame className="h-3 w-3 mr-1" />
+            FLASH SALE -₹{flashSaleInfo.discountAmount}
+          </span>
+        </div>
+      ) : discountPercent > 0 && (
         <div className="absolute top-4 left-4 z-10">
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-red-500 to-pink-500 text-white shadow-lg">
             -{discountPercent}% OFF
@@ -183,6 +247,11 @@ export function ProductCard({ product, onQuickView }: ProductCardProps) {
               <p className="text-xs font-medium text-purple-600 mt-0.5 flex items-center gap-1">
                 <Layers className="h-3 w-3" />
                 {product.variants!.length} plans available
+              </p>
+            ) : flashSaleInfo.isOnFlashSale ? (
+              <p className="text-xs font-semibold text-red-600 mt-0.5 flex items-center gap-1">
+                <Flame className="h-3 w-3" />
+                Flash Sale - Save ₹{flashSaleInfo.discountAmount}
               </p>
             ) : savings > 0 ? (
               <p className="text-xs font-semibold text-emerald-600 mt-0.5">
