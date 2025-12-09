@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Product } from '@/types';
 import { Button } from '@/components/ui/button';
@@ -39,18 +39,24 @@ export function FlashSales({ products }: FlashSalesProps) {
     const loadConfig = () => {
       const savedConfig = localStorage.getItem('flashSaleConfig');
       if (savedConfig) {
-        const parsed = JSON.parse(savedConfig);
-        setConfig(parsed);
-        
-        // Check if flash sale has expired
-        if (parsed.end_time) {
-          const endTime = new Date(parsed.end_time).getTime();
-          const now = Date.now();
-          if (now >= endTime) {
-            setIsExpired(true);
+        try {
+          const parsed = JSON.parse(savedConfig);
+          setConfig(parsed);
+          
+          // Check if flash sale has expired
+          if (parsed.end_time) {
+            const endTime = new Date(parsed.end_time).getTime();
+            const now = Date.now();
+            if (now >= endTime) {
+              setIsExpired(true);
+            } else {
+              setIsExpired(false);
+            }
           } else {
             setIsExpired(false);
           }
+        } catch (e) {
+          console.error('Error parsing flash sale config:', e);
         }
       }
     };
@@ -61,9 +67,13 @@ export function FlashSales({ products }: FlashSalesProps) {
     return () => clearInterval(configInterval);
   }, []);
 
-  // Get flash sale products with their discounts
-  const getFlashSaleProducts = () => {
+  // Get flash sale products with their discounts - use useMemo for reactivity
+  const flashProducts = useMemo(() => {
     if (!config?.enabled || isExpired || !config?.flash_sale_products?.length) {
+      return [];
+    }
+    
+    if (!products || products.length === 0) {
       return [];
     }
     
@@ -78,9 +88,7 @@ export function FlashSales({ products }: FlashSalesProps) {
         };
       })
       .filter(Boolean) as (Product & { flashDiscountAmount: number; flashSalePrice: number })[];
-  };
-
-  const flashProducts = getFlashSaleProducts();
+  }, [config, isExpired, products]);
 
   useEffect(() => {
     if (!config?.end_time) return;
@@ -118,7 +126,8 @@ export function FlashSales({ products }: FlashSalesProps) {
   }, [config?.end_time]);
 
   // Don't show if no products, disabled, or expired
-  if (flashProducts.length === 0 || !config?.enabled || isExpired) return null;
+  // Debug: console.log('FlashSales Debug:', { config, isExpired, flashProductsCount: flashProducts.length, productsCount: products.length });
+  if (!config || !config.enabled || isExpired || flashProducts.length === 0) return null;
 
   return (
     <section className="container mx-auto px-4 py-8">
