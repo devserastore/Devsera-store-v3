@@ -56,10 +56,10 @@ export function AdminDashboard() {
     fetchUserCount();
   }, []);
 
-  // Use database orders only, no mock data
+  // Use database orders with products from database
   const orders = dbOrders.map(order => ({
     ...order,
-    product: mockProducts.find(p => p.id === order.productId),
+    product: dbProducts.find(p => p.id === order.productId) || mockProducts.find(p => p.id === order.productId),
   }));
   const products = isSupabaseConfigured && dbProducts.length > 0 ? dbProducts : mockProducts;
 
@@ -87,11 +87,22 @@ export function AdminDashboard() {
     }
   }, [orders]);
 
+  // Calculate revenue from completed orders
   const totalRevenue = orders
     .filter(o => o.status === 'COMPLETED')
     .reduce((sum, order) => {
       return sum + (order.product?.salePrice || 0);
     }, 0);
+
+  // Calculate total cost (vendor price) from completed orders
+  const totalCost = orders
+    .filter(o => o.status === 'COMPLETED')
+    .reduce((sum, order) => {
+      return sum + (order.product?.costPrice || 0);
+    }, 0);
+
+  // Calculate profit
+  const totalProfit = totalRevenue - totalCost;
 
   const orderCounts = {
     total: orders.length,
@@ -150,6 +161,24 @@ export function AdminDashboard() {
               <p className="text-emerald-100 text-sm font-medium">Total Revenue</p>
               <p className="text-3xl font-bold">₹{totalRevenue.toLocaleString()}</p>
               <p className="text-emerald-100 text-xs mt-1">{orderCounts.completed} completed orders</p>
+            </CardContent>
+          </Card>
+
+          {/* Profit Card */}
+          <Card className="col-span-2 bg-gradient-to-br from-amber-500 to-orange-600 text-white border-0 shadow-lg shadow-amber-500/20">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                  <TrendingUp className="h-6 w-6" />
+                </div>
+                <div className="flex items-center gap-1 text-sm text-amber-100">
+                  <BarChart3 className="h-4 w-4" />
+                  Net
+                </div>
+              </div>
+              <p className="text-amber-100 text-sm font-medium">Total Profit</p>
+              <p className="text-3xl font-bold">₹{totalProfit.toLocaleString()}</p>
+              <p className="text-amber-100 text-xs mt-1">Cost: ₹{totalCost.toLocaleString()}</p>
             </CardContent>
           </Card>
 

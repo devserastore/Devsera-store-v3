@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/use-toast';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CheckCircle2, XCircle, Eye, Key, Package, UserCheck, Zap, User, Clock, AlertCircle, Mail } from 'lucide-react';
+import { CheckCircle2, XCircle, Eye, Key, Package, UserCheck, Zap, User, Clock, AlertCircle, Mail, Trash2 } from 'lucide-react';
 import { Order, OrderCredentials, DeliveryType, OrderStatus } from '@/types';
 import { isSupabaseConfigured } from '@/lib/supabase';
 
@@ -35,7 +35,7 @@ export function OrderVerificationPanel() {
   });
   const [rejectionReason, setRejectionReason] = useState('');
   const { toast } = useToast();
-  const { orders: dbOrders, approveOrder, rejectOrder } = useAdminOrders();
+  const { orders: dbOrders, approveOrder, rejectOrder, deleteOrder } = useAdminOrders();
 
   // Use database orders with their actual product data
   const orders = dbOrders;
@@ -157,6 +157,28 @@ export function OrderVerificationPanel() {
       });
       setSelectedOrder(null);
       setRejectionReason('');
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteOrder = async (orderId: string) => {
+    if (!confirm('Are you sure you want to permanently delete this order? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      if (isSupabaseConfigured) {
+        await deleteOrder(orderId);
+      }
+      toast({
+        title: 'Order deleted',
+        description: 'The order has been permanently removed.',
+      });
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -402,22 +424,40 @@ export function OrderVerificationPanel() {
                   </div>
                 </div>
                 {order.status === 'SUBMITTED' ? (
-                  <Button
-                    onClick={() => setSelectedOrder(order)}
-                    className="brutalist-button bg-primary text-primary-foreground hover:bg-primary/90 ml-4"
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    Review
-                  </Button>
+                  <div className="flex items-center gap-2 ml-4">
+                    <Button
+                      onClick={() => setSelectedOrder(order)}
+                      className="brutalist-button bg-primary text-primary-foreground hover:bg-primary/90"
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      Review
+                    </Button>
+                    <Button
+                      onClick={() => handleDeleteOrder(order.id)}
+                      variant="outline"
+                      className="border-2 border-red-500 text-red-500 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 ) : (
-                  <Button
-                    onClick={() => setSelectedOrder(order)}
-                    variant="outline"
-                    className="border-2 border-black ml-4"
-                  >
-                    <Eye className="h-4 w-4 mr-2" />
-                    View
-                  </Button>
+                  <div className="flex items-center gap-2 ml-4">
+                    <Button
+                      onClick={() => setSelectedOrder(order)}
+                      variant="outline"
+                      className="border-2 border-black"
+                    >
+                      <Eye className="h-4 w-4 mr-2" />
+                      View
+                    </Button>
+                    <Button
+                      onClick={() => handleDeleteOrder(order.id)}
+                      variant="outline"
+                      className="border-2 border-red-500 text-red-500 hover:bg-red-50"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 )}
               </div>
             </div>

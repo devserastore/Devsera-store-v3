@@ -49,6 +49,7 @@ const emptyProduct: Partial<Product> = {
   image: '',
   originalPrice: 0,
   salePrice: 0,
+  costPrice: 0,
   duration: '1 Month',
   features: [],
   category: '',
@@ -238,6 +239,7 @@ export function ProductManager() {
         image: p.image || '',
         originalPrice: p.original_price || 0,
         salePrice: p.sale_price || 0,
+        costPrice: p.cost_price || 0,
         duration: p.duration || '1 Month',
         features: p.features || [],
         category: p.category || 'General',
@@ -512,6 +514,7 @@ export function ProductManager() {
       image: editingProduct.image?.trim() || 'https://images.unsplash.com/photo-1633419461186-7d40a38105ec?w=800&q=80',
       original_price: editingProduct.originalPrice || editingProduct.salePrice,
       sale_price: editingProduct.salePrice,
+      cost_price: editingProduct.costPrice || 0,
       duration: editingProduct.duration || '1 Month',
       features: featuresText.split('\n').filter(f => f.trim()),
       category: editingProduct.category?.trim() || 'General',
@@ -1064,6 +1067,27 @@ export function ProductManager() {
                     className="mt-1.5 border-2 border-black focus:border-[#0A7A7A]"
                     disabled={editingProduct?.hasVariants}
                   />
+                </div>
+
+                <div>
+                  <Label htmlFor="costPrice" className="font-medium">
+                    Cost Price (₹) <span className="text-gray-400 text-xs">(Vendor Price - Admin Only)</span>
+                  </Label>
+                  <Input
+                    id="costPrice"
+                    type="number"
+                    min="0"
+                    value={editingProduct?.costPrice || ''}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, costPrice: Number(e.target.value) })}
+                    placeholder="299"
+                    className="mt-1.5 border-2 border-amber-400 focus:border-amber-600 bg-amber-50"
+                    disabled={editingProduct?.hasVariants}
+                  />
+                  {editingProduct?.salePrice && editingProduct?.costPrice ? (
+                    <p className="text-xs text-green-600 mt-1 font-medium">
+                      Profit: ₹{(editingProduct.salePrice - editingProduct.costPrice).toLocaleString()} per sale
+                    </p>
+                  ) : null}
                 </div>
 
                 <div>

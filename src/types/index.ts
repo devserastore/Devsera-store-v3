@@ -44,6 +44,7 @@ export interface Product {
   image: string;
   originalPrice: number;
   salePrice: number;
+  costPrice?: number; // Vendor/purchase price (admin only - for profit calculation)
   duration: string;
   features: string[];
   category: string;
