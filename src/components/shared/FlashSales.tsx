@@ -5,6 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Zap, Clock, ArrowRight, Flame } from 'lucide-react';
 
+interface FlashSaleConfig {
+  enabled: boolean;
+  duration_hours: number;
+  min_discount_percent: number;
+  max_products: number;
+  product_ids: string[];
+  start_time?: string;
+}
+
 interface FlashSalesProps {
   products: Product[];
 }
@@ -12,41 +21,80 @@ interface FlashSalesProps {
 export function FlashSales({ products }: FlashSalesProps) {
   const navigate = useNavigate();
   const [timeLeft, setTimeLeft] = useState({
-    hours: 5,
-    minutes: 59,
-    seconds: 59
+    hours: 0,
+    minutes: 0,
+    seconds: 0
   });
+  const [config, setConfig] = useState<FlashSaleConfig | null>(null);
 
-  // Get top 3 discounted products for flash sale
-  const flashProducts = products
-    .filter(p => p.originalPrice > p.salePrice)
-    .sort((a, b) => {
-      const discountA = ((a.originalPrice - a.salePrice) / a.originalPrice) * 100;
-      const discountB = ((b.originalPrice - b.salePrice) / b.originalPrice) * 100;
-      return discountB - discountA;
-    })
-    .slice(0, 3);
+  // Load config from localStorage
+  useEffect(() => {
+    const savedConfig = localStorage.getItem('flashSaleConfig');
+    if (savedConfig) {
+      const parsed = JSON.parse(savedConfig);
+      setConfig(parsed);
+      
+      // Initialize or get start time
+      let startTime = localStorage.getItem('flashSaleStartTime');
+      if (!startTime) {
+        startTime = new Date().toISOString();
+        localStorage.setItem('flashSaleStartTime', startTime);
+      }
+    }
+  }, []);
+
+  // Get flash sale products based on config
+  const flashProducts = config?.enabled && config?.product_ids?.length > 0
+    ? products.filter(p => config.product_ids.includes(p.id))
+    : products
+        .filter(p => p.originalPrice > p.salePrice)
+        .sort((a, b) => {
+          const discountA = ((a.originalPrice - a.salePrice) / a.originalPrice) * 100;
+          const discountB = ((b.originalPrice - b.salePrice) / b.originalPrice) * 100;
+          return discountB - discountA;
+        })
+        .slice(0, 3);
 
   useEffect(() => {
+    const durationHours = config?.duration_hours || 6;
+    
+    const calculateTimeLeft = () => {
+      const startTimeStr = localStorage.getItem('flashSaleStartTime');
+      if (!startTimeStr) {
+        const now = new Date().toISOString();
+        localStorage.setItem('flashSaleStartTime', now);
+        return { hours: durationHours, minutes: 0, seconds: 0 };
+      }
+      
+      const startTime = new Date(startTimeStr).getTime();
+      const endTime = startTime + (durationHours * 60 * 60 * 1000);
+      const now = Date.now();
+      const diff = endTime - now;
+      
+      if (diff <= 0) {
+        // Reset the timer
+        const newStartTime = new Date().toISOString();
+        localStorage.setItem('flashSaleStartTime', newStartTime);
+        return { hours: durationHours, minutes: 0, seconds: 0 };
+      }
+      
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+      
+      return { hours, minutes, seconds };
+    };
+
+    setTimeLeft(calculateTimeLeft());
+
     const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev.seconds > 0) {
-          return { ...prev, seconds: prev.seconds - 1 };
-        } else if (prev.minutes > 0) {
-          return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        } else if (prev.hours > 0) {
-          return { hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        } else {
-          // Reset timer
-          return { hours: 5, minutes: 59, seconds: 59 };
-        }
-      });
+      setTimeLeft(calculateTimeLeft());
     }, 1000);
 
     return () => clearInterval(timer);
-  }, []);
+  }, [config]);
 
-  if (flashProducts.length === 0) return null;
+  if (flashProducts.length === 0 || (config && !config.enabled)) return null;
 
   return (
     <section className="container mx-auto px-4 py-8">

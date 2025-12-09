@@ -64,10 +64,13 @@ export function FlashSalesManager() {
       // Save to localStorage for now (can be extended to Supabase)
       localStorage.setItem('flashSaleConfig', JSON.stringify(newConfig));
       
+      // Reset the timer when saving new config
+      localStorage.setItem('flashSaleStartTime', new Date().toISOString());
+      
       setConfig(newConfig);
       toast({
         title: 'Flash Sale Settings Saved',
-        description: 'Your flash sale configuration has been updated.',
+        description: 'Your flash sale configuration has been updated and timer reset.',
       });
     } catch (error: any) {
       toast({

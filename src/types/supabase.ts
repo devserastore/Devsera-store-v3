@@ -553,13 +553,16 @@ export type Database = {
           image: string
           is_active: boolean | null
           low_stock_alert: number | null
+          manual_stock_count: number | null
           name: string
           original_price: number
+          requires_password: boolean | null
           requires_user_input: boolean | null
           sale_price: number
           scheduled_end: string | null
           scheduled_start: string | null
           updated_at: string
+          use_manual_stock: boolean | null
           user_input_label: string | null
         }
         Insert: {
@@ -575,13 +578,16 @@ export type Database = {
           image: string
           is_active?: boolean | null
           low_stock_alert?: number | null
+          manual_stock_count?: number | null
           name: string
           original_price: number
+          requires_password?: boolean | null
           requires_user_input?: boolean | null
           sale_price: number
           scheduled_end?: string | null
           scheduled_start?: string | null
           updated_at?: string
+          use_manual_stock?: boolean | null
           user_input_label?: string | null
         }
         Update: {
@@ -597,13 +603,16 @@ export type Database = {
           image?: string
           is_active?: boolean | null
           low_stock_alert?: number | null
+          manual_stock_count?: number | null
           name?: string
           original_price?: number
+          requires_password?: boolean | null
           requires_user_input?: boolean | null
           sale_price?: number
           scheduled_end?: string | null
           scheduled_start?: string | null
           updated_at?: string
+          use_manual_stock?: boolean | null
           user_input_label?: string | null
         }
         Relationships: []

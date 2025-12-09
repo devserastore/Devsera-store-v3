@@ -145,8 +145,8 @@ export function CheckoutPage() {
       return;
     }
 
-    // Validate password for manual activation products
-    if (product?.requiresUserInput && !userPassword.trim()) {
+    // Validate password for manual activation products (only if requiresPassword is true)
+    if (product?.requiresUserInput && product?.requiresPassword !== false && !userPassword.trim()) {
       toast({
         title: 'Password required',
         description: 'Please provide your account password for activation',
@@ -183,7 +183,10 @@ export function CheckoutPage() {
 
       // Combine email and password for storage
       const userProvidedData = product?.requiresUserInput 
-        ? JSON.stringify({ email: userInput, password: userPassword })
+        ? JSON.stringify({ 
+            email: userInput, 
+            password: product?.requiresPassword !== false ? userPassword : undefined 
+          })
         : userInput;
 
       if (isSupabaseConfigured && currentOrderId) {
@@ -520,11 +523,13 @@ export function CheckoutPage() {
                 <div className="flex items-center gap-2 mb-3">
                   <Info className="h-5 w-5 text-blue-600" />
                   <h3 className="font-bold text-blue-800">
-                    Your Account Credentials Required
+                    Your Account {product.requiresPassword !== false ? 'Credentials' : 'Details'} Required
                   </h3>
                 </div>
                 <p className="text-sm text-blue-700 mb-4">
-                  We need your account credentials to activate the service on your existing account. Your credentials are securely stored and only used for activation.
+                  {product.requiresPassword !== false 
+                    ? 'We need your account credentials to activate the service on your existing account. Your credentials are securely stored and only used for activation.'
+                    : 'We need your account details to activate the service on your existing account.'}
                 </p>
                 <div className="space-y-4">
                   <div>
@@ -540,22 +545,24 @@ export function CheckoutPage() {
                       className="border-2 border-blue-200 rounded-xl mt-2 focus:border-blue-500"
                     />
                   </div>
-                  <div>
-                    <Label htmlFor="userPassword" className="font-semibold text-blue-800">
-                      Account Password *
-                    </Label>
-                    <Input
-                      id="userPassword"
-                      type="password"
-                      placeholder="Enter your account password"
-                      value={userPassword}
-                      onChange={(e) => setUserPassword(e.target.value)}
-                      className="border-2 border-blue-200 rounded-xl mt-2 focus:border-blue-500"
-                    />
-                    <p className="text-xs text-blue-600 mt-1">
-                      🔒 Your password is encrypted and only used for activation purposes
-                    </p>
-                  </div>
+                  {product.requiresPassword !== false && (
+                    <div>
+                      <Label htmlFor="userPassword" className="font-semibold text-blue-800">
+                        Account Password *
+                      </Label>
+                      <Input
+                        id="userPassword"
+                        type="password"
+                        placeholder="Enter your account password"
+                        value={userPassword}
+                        onChange={(e) => setUserPassword(e.target.value)}
+                        className="border-2 border-blue-200 rounded-xl mt-2 focus:border-blue-500"
+                      />
+                      <p className="text-xs text-blue-600 mt-1">
+                        🔒 Your password is encrypted and only used for activation purposes
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -613,7 +620,7 @@ export function CheckoutPage() {
 
             <Button
               onClick={handleSubmit}
-              disabled={!screenshot || isUploading || (product.requiresUserInput && !userInput.trim())}
+              disabled={!screenshot || isUploading || (product.requiresUserInput && !userInput.trim()) || (product.requiresUserInput && product.requiresPassword !== false && !userPassword.trim())}
               className="w-full h-14 text-lg font-bold rounded-xl bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white shadow-lg shadow-teal-500/25 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isUploading ? (

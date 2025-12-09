@@ -51,6 +51,7 @@ export interface Product {
   deliveryInstructions?: string; // Instructions shown to user based on delivery type
   requiresUserInput?: boolean;   // If true, user must provide their account details
   userInputLabel?: string;       // Label for user input field (e.g., "Your Netflix Email")
+  requiresPassword?: boolean;    // If true, user must provide password (for manual activation)
   isActive?: boolean;
   // New fields for variants and scheduling
   hasVariants?: boolean;
@@ -59,6 +60,8 @@ export interface Product {
   scheduledEnd?: string;
   lowStockAlert?: number;
   stockCount?: number; // Computed from stock keys
+  manualStockCount?: number; // Manual stock count (not tied to keys)
+  useManualStock?: boolean; // If true, use manual stock count instead of keys
 }
 
 export interface OrderCredentials {
