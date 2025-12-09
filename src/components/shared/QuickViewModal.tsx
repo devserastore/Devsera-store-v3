@@ -1,10 +1,44 @@
+import { useState, useEffect } from 'react';
 import { Product } from '@/types';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useNavigate } from 'react-router-dom';
 import { useWishlist } from '@/contexts/WishlistContext';
-import { Heart, Clock, Key, Package, UserCheck, Zap, ShoppingCart, Star, Check } from 'lucide-react';
+import { Heart, Clock, Key, Package, UserCheck, Zap, ShoppingCart, Star, Check, Flame } from 'lucide-react';
+
+interface FlashSaleProduct {
+  productId: string;
+  discountAmount: number;
+}
+
+interface FlashSaleConfig {
+  enabled: boolean;
+  flash_sale_products: FlashSaleProduct[];
+  end_time?: string;
+}
+
+// Helper to get flash sale info for a product
+function getFlashSaleInfo(productId: string): { isOnFlashSale: boolean; discountAmount: number } {
+  try {
+    const savedConfig = localStorage.getItem('flashSaleConfig');
+    if (!savedConfig) return { isOnFlashSale: false, discountAmount: 0 };
+    
+    const config: FlashSaleConfig = JSON.parse(savedConfig);
+    
+    if (!config.enabled || !config.end_time) return { isOnFlashSale: false, discountAmount: 0 };
+    
+    const endTime = new Date(config.end_time).getTime();
+    if (Date.now() >= endTime) return { isOnFlashSale: false, discountAmount: 0 };
+    
+    const flashProduct = config.flash_sale_products?.find(fp => fp.productId === productId);
+    if (!flashProduct) return { isOnFlashSale: false, discountAmount: 0 };
+    
+    return { isOnFlashSale: true, discountAmount: flashProduct.discountAmount };
+  } catch {
+    return { isOnFlashSale: false, discountAmount: 0 };
+  }
+}
 
 interface QuickViewModalProps {
   product: Product | null;
@@ -29,11 +63,26 @@ const deliveryLabels: Record<string, string> = {
 export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps) {
   const navigate = useNavigate();
   const { isInWishlist, toggleWishlist } = useWishlist();
+  const [flashSaleInfo, setFlashSaleInfo] = useState({ isOnFlashSale: false, discountAmount: 0 });
+
+  // Check flash sale status
+  useEffect(() => {
+    if (!product) return;
+    const checkFlashSale = () => {
+      setFlashSaleInfo(getFlashSaleInfo(product.id));
+    };
+    checkFlashSale();
+    const interval = setInterval(checkFlashSale, 1000);
+    return () => clearInterval(interval);
+  }, [product?.id]);
 
   if (!product) return null;
 
-  const salePrice = product.salePrice || 0;
-  const originalPrice = product.originalPrice || 0;
+  const baseSalePrice = product.salePrice || 0;
+  const salePrice = flashSaleInfo.isOnFlashSale 
+    ? Math.max(0, baseSalePrice - flashSaleInfo.discountAmount)
+    : baseSalePrice;
+  const originalPrice = flashSaleInfo.isOnFlashSale ? baseSalePrice : (product.originalPrice || 0);
   const savings = originalPrice - salePrice;
   const discountPercent = originalPrice > 0 ? Math.round((savings / originalPrice) * 100) : 0;
 
@@ -53,7 +102,14 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
               alt={product.name}
               className="w-full h-64 md:h-full object-cover"
             />
-            {discountPercent > 0 && (
+            {flashSaleInfo.isOnFlashSale ? (
+              <div className="absolute top-4 left-4">
+                <Badge className="bg-gradient-to-r from-red-600 to-orange-500 text-white text-sm px-3 py-1 animate-pulse">
+                  <Flame className="h-3 w-3 mr-1 inline" />
+                  FLASH SALE -₹{flashSaleInfo.discountAmount}
+                </Badge>
+              </div>
+            ) : discountPercent > 0 && (
               <div className="absolute top-4 left-4">
                 <Badge className="bg-red-500 text-white text-sm px-3 py-1">
                   -{discountPercent}% OFF
@@ -123,7 +179,7 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
             {/* Price */}
             <div className="mt-auto pt-4 border-t border-gray-100 dark:border-gray-800">
               <div className="flex items-baseline gap-3 mb-4">
-                <span className="text-3xl font-bold text-gray-900 dark:text-white">
+                <span className={`text-3xl font-bold ${flashSaleInfo.isOnFlashSale ? 'text-red-600' : 'text-gray-900 dark:text-white'}`}>
                   ₹{salePrice.toLocaleString()}
                 </span>
                 {originalPrice > salePrice && (
@@ -131,9 +187,16 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
                     <span className="text-lg text-gray-400 line-through">
                       ₹{originalPrice.toLocaleString()}
                     </span>
-                    <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                      Save ₹{savings.toLocaleString()}
-                    </Badge>
+                    {flashSaleInfo.isOnFlashSale ? (
+                      <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                        <Flame className="h-3 w-3 mr-1 inline" />
+                        Save ₹{flashSaleInfo.discountAmount}
+                      </Badge>
+                    ) : (
+                      <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                        Save ₹{savings.toLocaleString()}
+                      </Badge>
+                    )}
                   </>
                 )}
               </div>
@@ -141,7 +204,9 @@ export function QuickViewModal({ product, isOpen, onClose }: QuickViewModalProps
               <div className="flex gap-3">
                 <Button
                   onClick={handleBuyNow}
-                  className="flex-1 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white font-semibold"
+                  className={`flex-1 font-semibold ${flashSaleInfo.isOnFlashSale 
+                    ? 'bg-gradient-to-r from-red-500 to-orange-500 hover:from-red-600 hover:to-orange-600 text-white' 
+                    : 'bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white'}`}
                 >
                   <ShoppingCart className="h-4 w-4 mr-2" />
                   Buy Now
