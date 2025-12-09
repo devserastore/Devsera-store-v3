@@ -542,6 +542,7 @@ export type Database = {
       products: {
         Row: {
           category: string
+          cost_price: number | null
           created_at: string
           delivery_instructions: string | null
           delivery_type: string
@@ -553,17 +554,21 @@ export type Database = {
           image: string
           is_active: boolean | null
           low_stock_alert: number | null
+          manual_stock_count: number | null
           name: string
           original_price: number
+          requires_password: boolean | null
           requires_user_input: boolean | null
           sale_price: number
           scheduled_end: string | null
           scheduled_start: string | null
           updated_at: string
+          use_manual_stock: boolean | null
           user_input_label: string | null
         }
         Insert: {
           category: string
+          cost_price?: number | null
           created_at?: string
           delivery_instructions?: string | null
           delivery_type?: string
@@ -575,17 +580,21 @@ export type Database = {
           image: string
           is_active?: boolean | null
           low_stock_alert?: number | null
+          manual_stock_count?: number | null
           name: string
           original_price: number
+          requires_password?: boolean | null
           requires_user_input?: boolean | null
           sale_price: number
           scheduled_end?: string | null
           scheduled_start?: string | null
           updated_at?: string
+          use_manual_stock?: boolean | null
           user_input_label?: string | null
         }
         Update: {
           category?: string
+          cost_price?: number | null
           created_at?: string
           delivery_instructions?: string | null
           delivery_type?: string
@@ -597,13 +606,16 @@ export type Database = {
           image?: string
           is_active?: boolean | null
           low_stock_alert?: number | null
+          manual_stock_count?: number | null
           name?: string
           original_price?: number
+          requires_password?: boolean | null
           requires_user_input?: boolean | null
           sale_price?: number
           scheduled_end?: string | null
           scheduled_start?: string | null
           updated_at?: string
+          use_manual_stock?: boolean | null
           user_input_label?: string | null
         }
         Relationships: []

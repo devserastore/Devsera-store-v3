@@ -373,5 +373,15 @@ export function useAdminOrders() {
     await loadOrders();
   };
 
-  return { orders, isLoading, error, refetch: loadOrders, approveOrder, rejectOrder };
+  const deleteOrder = async (orderId: string) => {
+    const { error } = await supabase
+      .from('orders')
+      .delete()
+      .eq('id', orderId);
+
+    if (error) throw error;
+    await loadOrders();
+  };
+
+  return { orders, isLoading, error, refetch: loadOrders, approveOrder, rejectOrder, deleteOrder };
 }

@@ -49,6 +49,7 @@ const emptyProduct: Partial<Product> = {
   image: '',
   originalPrice: 0,
   salePrice: 0,
+  costPrice: 0,
   duration: '1 Month',
   features: [],
   category: '',
@@ -56,11 +57,14 @@ const emptyProduct: Partial<Product> = {
   deliveryInstructions: '',
   requiresUserInput: false,
   userInputLabel: '',
+  requiresPassword: true,
   isActive: true,
   hasVariants: false,
   scheduledStart: '',
   scheduledEnd: '',
-  lowStockAlert: 5
+  lowStockAlert: 5,
+  useManualStock: false,
+  manualStockCount: 0
 };
 
 interface VariantForm {
@@ -235,6 +239,7 @@ export function ProductManager() {
         image: p.image || '',
         originalPrice: p.original_price || 0,
         salePrice: p.sale_price || 0,
+        costPrice: p.cost_price || 0,
         duration: p.duration || '1 Month',
         features: p.features || [],
         category: p.category || 'General',
@@ -242,21 +247,28 @@ export function ProductManager() {
         deliveryInstructions: p.delivery_instructions || '',
         requiresUserInput: p.requires_user_input || false,
         userInputLabel: p.user_input_label || '',
+        requiresPassword: p.requires_password !== false,
         isActive: p.is_active !== false,
         hasVariants: p.has_variants || false,
         scheduledStart: p.scheduled_start || '',
         scheduledEnd: p.scheduled_end || '',
-        lowStockAlert: p.low_stock_alert || 5
+        lowStockAlert: p.low_stock_alert || 5,
+        useManualStock: p.use_manual_stock || false,
+        manualStockCount: p.manual_stock_count || 0
       }));
 
       // Load stock counts for each product
       for (const product of mappedProducts) {
-        const { count } = await supabase
-          .from('product_stock_keys')
-          .select('*', { count: 'exact', head: true })
-          .eq('product_id', product.id)
-          .eq('status', 'AVAILABLE');
-        product.stockCount = count || 0;
+        if (product.useManualStock) {
+          product.stockCount = product.manualStockCount || 0;
+        } else {
+          const { count } = await supabase
+            .from('product_stock_keys')
+            .select('*', { count: 'exact', head: true })
+            .eq('product_id', product.id)
+            .eq('status', 'AVAILABLE');
+          product.stockCount = count || 0;
+        }
       }
 
       // Load variants for products with hasVariants
@@ -502,6 +514,7 @@ export function ProductManager() {
       image: editingProduct.image?.trim() || 'https://images.unsplash.com/photo-1633419461186-7d40a38105ec?w=800&q=80',
       original_price: editingProduct.originalPrice || editingProduct.salePrice,
       sale_price: editingProduct.salePrice,
+      cost_price: editingProduct.costPrice || 0,
       duration: editingProduct.duration || '1 Month',
       features: featuresText.split('\n').filter(f => f.trim()),
       category: editingProduct.category?.trim() || 'General',
@@ -509,6 +522,7 @@ export function ProductManager() {
       delivery_instructions: editingProduct.deliveryInstructions?.trim() || '',
       requires_user_input: editingProduct.requiresUserInput || false,
       user_input_label: editingProduct.userInputLabel?.trim() || '',
+      requires_password: editingProduct.requiresPassword !== false,
       is_active: editingProduct.isActive !== false,
       has_variants: editingProduct.hasVariants || false,
       scheduled_start: editingProduct.scheduledStart || null,
@@ -873,26 +887,26 @@ export function ProductManager() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {product.deliveryType === 'INSTANT_KEY' ? (
-                        <button
-                          onClick={() => openStockDialog(product)}
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border-2 transition-all ${
-                            (product.stockCount || 0) === 0
-                              ? 'bg-red-100 text-red-700 border-red-300 hover:bg-red-200'
-                              : (product.stockCount || 0) <= (product.lowStockAlert || 5)
-                              ? 'bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200'
-                              : 'bg-green-100 text-green-700 border-green-300 hover:bg-green-200'
-                          }`}
-                        >
+                      <button
+                        onClick={() => openStockDialog(product)}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold border-2 transition-all ${
+                          (product.stockCount || 0) === 0
+                            ? 'bg-gray-100 text-gray-600 border-gray-300 hover:bg-gray-200'
+                            : (product.stockCount || 0) <= (product.lowStockAlert || 5)
+                            ? 'bg-amber-100 text-amber-700 border-amber-300 hover:bg-amber-200'
+                            : 'bg-green-100 text-green-700 border-green-300 hover:bg-green-200'
+                        }`}
+                      >
+                        {product.useManualStock ? (
+                          <Package className="h-3.5 w-3.5" />
+                        ) : (
                           <Database className="h-3.5 w-3.5" />
-                          {product.stockCount || 0} keys
-                          {(product.stockCount || 0) <= (product.lowStockAlert || 5) && (product.stockCount || 0) > 0 && (
-                            <AlertTriangle className="h-3 w-3" />
-                          )}
-                        </button>
-                      ) : (
-                        <span className="text-gray-400 text-sm">N/A</span>
-                      )}
+                        )}
+                        {product.stockCount || 0} {product.useManualStock ? 'stock' : 'keys'}
+                        {(product.stockCount || 0) <= (product.lowStockAlert || 5) && (product.stockCount || 0) > 0 && (
+                          <AlertTriangle className="h-3 w-3" />
+                        )}
+                      </button>
                     </TableCell>
                     <TableCell>
                       <button
@@ -1056,6 +1070,27 @@ export function ProductManager() {
                 </div>
 
                 <div>
+                  <Label htmlFor="costPrice" className="font-medium">
+                    Cost Price (₹) <span className="text-gray-400 text-xs">(Vendor Price - Admin Only)</span>
+                  </Label>
+                  <Input
+                    id="costPrice"
+                    type="number"
+                    min="0"
+                    value={editingProduct?.costPrice || ''}
+                    onChange={(e) => setEditingProduct({ ...editingProduct, costPrice: Number(e.target.value) })}
+                    placeholder="299"
+                    className="mt-1.5 border-2 border-amber-400 focus:border-amber-600 bg-amber-50"
+                    disabled={editingProduct?.hasVariants}
+                  />
+                  {editingProduct?.salePrice && editingProduct?.costPrice ? (
+                    <p className="text-xs text-green-600 mt-1 font-medium">
+                      Profit: ₹{(editingProduct.salePrice - editingProduct.costPrice).toLocaleString()} per sale
+                    </p>
+                  ) : null}
+                </div>
+
+                <div>
                   <Label htmlFor="duration" className="font-medium">Duration</Label>
                   <Select
                     value={editingProduct?.duration || '1 Month'}
@@ -1068,6 +1103,7 @@ export function ProductManager() {
                     <SelectContent>
                       <SelectItem value="1 Week">1 Week</SelectItem>
                       <SelectItem value="1 Month">1 Month</SelectItem>
+                      <SelectItem value="2 Months">2 Months</SelectItem>
                       <SelectItem value="3 Months">3 Months</SelectItem>
                       <SelectItem value="6 Months">6 Months</SelectItem>
                       <SelectItem value="1 Year">1 Year</SelectItem>
@@ -1253,6 +1289,7 @@ export function ProductManager() {
                             <SelectContent>
                               <SelectItem value="1 Week">1 Week</SelectItem>
                               <SelectItem value="1 Month">1 Month</SelectItem>
+                              <SelectItem value="2 Months">2 Months</SelectItem>
                               <SelectItem value="3 Months">3 Months</SelectItem>
                               <SelectItem value="6 Months">6 Months</SelectItem>
                               <SelectItem value="1 Year">1 Year</SelectItem>
@@ -1350,16 +1387,28 @@ export function ProductManager() {
                     </div>
 
                     {editingProduct?.requiresUserInput && (
-                      <div>
-                        <Label htmlFor="userInputLabel" className="font-medium">User Input Label</Label>
-                        <Input
-                          id="userInputLabel"
-                          value={editingProduct?.userInputLabel || ''}
-                          onChange={(e) => setEditingProduct({ ...editingProduct, userInputLabel: e.target.value })}
-                          placeholder="e.g., Your Netflix Email"
-                          className="mt-1.5 border-2 border-black focus:border-[#0A7A7A]"
-                        />
-                      </div>
+                      <>
+                        <div>
+                          <Label htmlFor="userInputLabel" className="font-medium">User Input Label</Label>
+                          <Input
+                            id="userInputLabel"
+                            value={editingProduct?.userInputLabel || ''}
+                            onChange={(e) => setEditingProduct({ ...editingProduct, userInputLabel: e.target.value })}
+                            placeholder="e.g., Your Netflix Email"
+                            className="mt-1.5 border-2 border-black focus:border-[#0A7A7A]"
+                          />
+                        </div>
+                        <div className="flex items-center gap-3 pt-2 border-t border-amber-300">
+                          <Switch
+                            checked={editingProduct?.requiresPassword !== false}
+                            onCheckedChange={(checked) => setEditingProduct({ ...editingProduct, requiresPassword: checked })}
+                          />
+                          <div>
+                            <Label className="font-medium">Require Password</Label>
+                            <p className="text-xs text-gray-500">Turn off if you only need email/username from user</p>
+                          </div>
+                        </div>
+                      </>
                     )}
                   </div>
                 )}
@@ -1497,6 +1546,74 @@ export function ProductManager() {
           </DialogHeader>
 
           <div className="space-y-6 py-4">
+            {/* Manual Stock Option */}
+            <div className="p-4 bg-amber-50 border-2 border-amber-200 rounded-lg space-y-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="font-semibold text-amber-900 flex items-center gap-2">
+                    <Package className="h-4 w-4" />
+                    Manual Stock Count
+                  </h4>
+                  <p className="text-xs text-amber-700 mt-1">
+                    Set stock count manually without adding individual keys (useful when you don't have pre-loaded keys)
+                  </p>
+                </div>
+                <Switch
+                  checked={selectedProductForStock?.useManualStock || false}
+                  onCheckedChange={async (checked) => {
+                    if (!selectedProductForStock || !isSupabaseConfigured) return;
+                    await supabase
+                      .from('products')
+                      .update({ use_manual_stock: checked })
+                      .eq('id', selectedProductForStock.id);
+                    setSelectedProductForStock({ ...selectedProductForStock, useManualStock: checked });
+                    setProducts(products.map(p => 
+                      p.id === selectedProductForStock.id ? { ...p, useManualStock: checked } : p
+                    ));
+                  }}
+                />
+              </div>
+              
+              {selectedProductForStock?.useManualStock && (
+                <div className="flex items-center gap-3 mt-3">
+                  <Label className="text-amber-900 font-medium">Stock Count:</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    value={selectedProductForStock?.manualStockCount || 0}
+                    onChange={(e) => {
+                      const value = parseInt(e.target.value) || 0;
+                      setSelectedProductForStock({ ...selectedProductForStock, manualStockCount: value });
+                    }}
+                    className="w-24 border-2 border-amber-300"
+                  />
+                  <Button
+                    onClick={async () => {
+                      if (!selectedProductForStock || !isSupabaseConfigured) return;
+                      await supabase
+                        .from('products')
+                        .update({ manual_stock_count: selectedProductForStock.manualStockCount })
+                        .eq('id', selectedProductForStock.id);
+                      setProducts(products.map(p => 
+                        p.id === selectedProductForStock.id 
+                          ? { ...p, manualStockCount: selectedProductForStock.manualStockCount, stockCount: selectedProductForStock.manualStockCount } 
+                          : p
+                      ));
+                      toast({
+                        title: 'Stock Updated',
+                        description: `Manual stock count set to ${selectedProductForStock.manualStockCount}`,
+                      });
+                    }}
+                    className="bg-amber-600 hover:bg-amber-700 text-white"
+                  >
+                    Save Stock
+                  </Button>
+                </div>
+              )}
+            </div>
+
+            {!selectedProductForStock?.useManualStock && (
+              <>
             {/* Stock Summary */}
             <div className="grid grid-cols-3 gap-4">
               <div className="p-4 bg-green-50 border-2 border-green-200 rounded-lg text-center">
@@ -1646,6 +1763,8 @@ export function ProductManager() {
                 )}
               </div>
             </div>
+              </>
+            )}
           </div>
         </DialogContent>
       </Dialog>
