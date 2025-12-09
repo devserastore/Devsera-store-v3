@@ -326,14 +326,27 @@ export function ProductDetailPage() {
                           <p className="text-sm text-gray-500 dark:text-gray-400">{variant.duration}</p>
                         </div>
                         <div className="text-right">
-                          {variant.originalPrice > variant.salePrice && (
-                            <p className="text-sm text-gray-400 line-through">
-                              ₹{variant.originalPrice.toLocaleString()}
-                            </p>
+                          {flashSaleInfo.isOnFlashSale ? (
+                            <>
+                              <p className="text-sm text-gray-400 line-through">
+                                ₹{variant.salePrice.toLocaleString()}
+                              </p>
+                              <p className={`text-lg font-bold ${selectedVariant?.id === variant.id ? 'text-red-600 dark:text-red-400' : 'text-gray-900 dark:text-white'}`}>
+                                ₹{Math.max(0, variant.salePrice - flashSaleInfo.discountAmount).toLocaleString()}
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              {variant.originalPrice > variant.salePrice && (
+                                <p className="text-sm text-gray-400 line-through">
+                                  ₹{variant.originalPrice.toLocaleString()}
+                                </p>
+                              )}
+                              <p className={`text-lg font-bold ${selectedVariant?.id === variant.id ? 'text-teal-600 dark:text-teal-400' : 'text-gray-900 dark:text-white'}`}>
+                                ₹{variant.salePrice.toLocaleString()}
+                              </p>
+                            </>
                           )}
-                          <p className={`text-lg font-bold ${selectedVariant?.id === variant.id ? 'text-teal-600 dark:text-teal-400' : 'text-gray-900 dark:text-white'}`}>
-                            ₹{variant.salePrice.toLocaleString()}
-                          </p>
                         </div>
                       </div>
                       {variant.isDefault && (

@@ -9,10 +9,43 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { Copy, Upload, CheckCircle2, ArrowLeft, Info, Key, Package, UserCheck, Zap, Ticket, X, Clock, Layers } from 'lucide-react';
+import { Copy, Upload, CheckCircle2, ArrowLeft, Info, Key, Package, UserCheck, Zap, Ticket, X, Clock, Layers, Flame } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { DeliveryType, ProductVariant } from '@/types';
+
+interface FlashSaleProduct {
+  productId: string;
+  discountAmount: number;
+}
+
+interface FlashSaleConfig {
+  enabled: boolean;
+  flash_sale_products: FlashSaleProduct[];
+  end_time?: string;
+}
+
+// Helper to get flash sale info for a product
+function getFlashSaleInfo(productId: string): { isOnFlashSale: boolean; discountAmount: number } {
+  try {
+    const savedConfig = localStorage.getItem('flashSaleConfig');
+    if (!savedConfig) return { isOnFlashSale: false, discountAmount: 0 };
+    
+    const config: FlashSaleConfig = JSON.parse(savedConfig);
+    
+    if (!config.enabled || !config.end_time) return { isOnFlashSale: false, discountAmount: 0 };
+    
+    const endTime = new Date(config.end_time).getTime();
+    if (Date.now() >= endTime) return { isOnFlashSale: false, discountAmount: 0 };
+    
+    const flashProduct = config.flash_sale_products?.find(fp => fp.productId === productId);
+    if (!flashProduct) return { isOnFlashSale: false, discountAmount: 0 };
+    
+    return { isOnFlashSale: true, discountAmount: flashProduct.discountAmount };
+  } catch {
+    return { isOnFlashSale: false, discountAmount: 0 };
+  }
+}
 
 const deliveryTypeInfo: Record<DeliveryType, { icon: React.ReactNode; color: string }> = {
   CREDENTIALS: { icon: <Key className="h-5 w-5" />, color: 'text-blue-600' },
@@ -32,6 +65,7 @@ export function CheckoutPage() {
   const [orderId, setOrderId] = useState<string | null>(null);
   const [userInput, setUserInput] = useState('');
   const [userPassword, setUserPassword] = useState('');
+  const [flashSaleInfo, setFlashSaleInfo] = useState({ isOnFlashSale: false, discountAmount: 0 });
   
   // Variant selection
   const [selectedVariantId, setSelectedVariantId] = useState<string | null>(searchParams.get('variant'));
@@ -45,14 +79,31 @@ export function CheckoutPage() {
   const product = dbProduct || (!isSupabaseConfigured ? mockProducts.find(p => p.id === id) : null);
   const settings = dbSettings || (!isSupabaseConfigured ? mockSettings : null);
   
+  // Check flash sale status
+  useEffect(() => {
+    if (!id) return;
+    const checkFlashSale = () => {
+      setFlashSaleInfo(getFlashSaleInfo(id));
+    };
+    checkFlashSale();
+    const interval = setInterval(checkFlashSale, 1000);
+    return () => clearInterval(interval);
+  }, [id]);
+  
   // Get selected variant
   const selectedVariant = product?.hasVariants && product.variants 
     ? product.variants.find(v => v.id === selectedVariantId) || product.variants.find(v => v.isDefault) || product.variants[0]
     : null;
   
   // Calculate effective price based on variant or product
-  const effectivePrice = selectedVariant ? selectedVariant.salePrice : (product?.salePrice || 0);
-  const effectiveOriginalPrice = selectedVariant ? selectedVariant.originalPrice : (product?.originalPrice || 0);
+  const baseEffectivePrice = selectedVariant ? selectedVariant.salePrice : (product?.salePrice || 0);
+  // Apply flash sale discount
+  const effectivePrice = flashSaleInfo.isOnFlashSale 
+    ? Math.max(0, baseEffectivePrice - flashSaleInfo.discountAmount)
+    : baseEffectivePrice;
+  const effectiveOriginalPrice = flashSaleInfo.isOnFlashSale 
+    ? baseEffectivePrice 
+    : (selectedVariant ? selectedVariant.originalPrice : (product?.originalPrice || 0));
   const effectiveDuration = selectedVariant ? selectedVariant.duration : (product?.duration || '');
   
   // Coupon state
@@ -258,13 +309,19 @@ export function CheckoutPage() {
                 <div className="flex-1">
                   <h3 className="font-bold text-gray-900 text-lg">{product.name}</h3>
                   <p className="text-sm text-gray-500">{effectiveDuration}</p>
+                  {flashSaleInfo.isOnFlashSale && (
+                    <div className="mt-1 inline-flex items-center px-2 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-red-600 to-orange-500 text-white">
+                      <Flame className="h-3 w-3 mr-1" />
+                      FLASH SALE -₹{flashSaleInfo.discountAmount}
+                    </div>
+                  )}
                   <div className="mt-2">
                     {effectiveOriginalPrice > effectivePrice && (
                       <span className="line-through text-gray-400 text-sm mr-2">
                         ₹{effectiveOriginalPrice.toLocaleString()}
                       </span>
                     )}
-                    <span className="text-2xl font-bold text-[#0A7A7A]">
+                    <span className={`text-2xl font-bold ${flashSaleInfo.isOnFlashSale ? 'text-red-600' : 'text-[#0A7A7A]'}`}>
                       ₹{effectivePrice.toLocaleString()}
                     </span>
                   </div>
@@ -285,7 +342,7 @@ export function CheckoutPage() {
                         onClick={() => setSelectedVariantId(variant.id)}
                         className={`p-3 rounded-xl border-2 text-left transition-all ${
                           selectedVariantId === variant.id
-                            ? 'border-[#0A7A7A] bg-teal-50 shadow-md'
+                            ? flashSaleInfo.isOnFlashSale ? 'border-red-500 bg-red-50 shadow-md' : 'border-[#0A7A7A] bg-teal-50 shadow-md'
                             : 'border-gray-200 hover:border-gray-300 bg-white'
                         }`}
                       >
@@ -297,14 +354,27 @@ export function CheckoutPage() {
                             <p className="text-xs text-gray-500">{variant.duration}</p>
                           </div>
                           <div className="text-right">
-                            {variant.originalPrice > variant.salePrice && (
-                              <p className="text-xs text-gray-400 line-through">
-                                ₹{variant.originalPrice.toLocaleString()}
-                              </p>
+                            {flashSaleInfo.isOnFlashSale ? (
+                              <>
+                                <p className="text-xs text-gray-400 line-through">
+                                  ₹{variant.salePrice.toLocaleString()}
+                                </p>
+                                <p className={`font-bold ${selectedVariantId === variant.id ? 'text-red-600' : 'text-gray-900'}`}>
+                                  ₹{Math.max(0, variant.salePrice - flashSaleInfo.discountAmount).toLocaleString()}
+                                </p>
+                              </>
+                            ) : (
+                              <>
+                                {variant.originalPrice > variant.salePrice && (
+                                  <p className="text-xs text-gray-400 line-through">
+                                    ₹{variant.originalPrice.toLocaleString()}
+                                  </p>
+                                )}
+                                <p className={`font-bold ${selectedVariantId === variant.id ? 'text-[#0A7A7A]' : 'text-gray-900'}`}>
+                                  ₹{variant.salePrice.toLocaleString()}
+                                </p>
+                              </>
                             )}
-                            <p className={`font-bold ${selectedVariantId === variant.id ? 'text-[#0A7A7A]' : 'text-gray-900'}`}>
-                              ₹{variant.salePrice.toLocaleString()}
-                            </p>
                           </div>
                         </div>
                         {variant.isDefault && (
@@ -376,13 +446,43 @@ export function CheckoutPage() {
               )}
             </div>
 
+            {/* Flash Sale Discount Display */}
+            {flashSaleInfo.isOnFlashSale && !appliedCoupon && (
+              <div className="bg-red-50 rounded-2xl border-2 border-red-200 p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Flame className="h-5 w-5 text-red-600" />
+                  <span className="font-bold text-red-600">Flash Sale Active!</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600">Original Price:</span>
+                  <span className="text-gray-500 line-through">₹{baseEffectivePrice.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between items-center text-red-600">
+                  <span>Flash Sale Discount:</span>
+                  <span>-₹{flashSaleInfo.discountAmount}</span>
+                </div>
+                <div className="flex justify-between items-center mt-2 pt-2 border-t border-red-200">
+                  <span className="font-bold text-gray-900">You Pay:</span>
+                  <span className="text-2xl font-bold text-red-600">
+                    ₹{effectivePrice.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Final Price */}
             {appliedCoupon && (
               <div className="bg-green-50 rounded-2xl border-2 border-green-200 p-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-gray-600">Original Price:</span>
+                  <span className="text-gray-600">{flashSaleInfo.isOnFlashSale ? 'Flash Sale Price:' : 'Original Price:'}</span>
                   <span className="text-gray-500 line-through">₹{effectivePrice.toLocaleString()}</span>
                 </div>
+                {flashSaleInfo.isOnFlashSale && (
+                  <div className="flex justify-between items-center text-red-600">
+                    <span>Flash Sale Discount:</span>
+                    <span>-₹{flashSaleInfo.discountAmount}</span>
+                  </div>
+                )}
                 <div className="flex justify-between items-center text-green-600">
                   <span>Coupon Discount:</span>
                   <span>-₹{appliedCoupon.discountAmount}</span>
